@@ -1,5 +1,40 @@
 # GLASSBOX — Weekend 2 Execution Plan (multi-model logit lens + web UI)
 
+> ## ✅ STATUS: COMPLETE — 2026-06-18, branch `feat/v2` (one commit per phase, nothing pushed)
+>
+> **Do not re-run Phases 0–3 — they are built, verified, and committed.** What's below is kept
+> as the design record. Read this banner first; the body has one important correction baked in.
+>
+> | Phase | Commit | State |
+> |---|---|---|
+> | 0 — TransformerBridge core + decode split + faithfulness tests | `59003f7` | ✅ done, GPT-2 green |
+> | 1 — pydantic schemas + all-positions | `41ed707` | ✅ done |
+> | 2 — FastAPI backend + ModelManager | `e3e49a6` | ✅ done |
+> | 3 — React/Vite/Tailwind UI | `970e94d` | ✅ done, screenshot-verified |
+>
+> **⚠️ KEYSTONE CORRECTION (the plan below was wrong here — the code is right):**
+> Phase 0.3 says decode via `cache.apply_ln_to_stack(...)` and avoid `model.ln_final`.
+> **That is backwards on TransformerLens 3.4.0.** `apply_ln_to_stack`'s `pos_slice` is silently
+> ignored → decode off by ~15 logits → fails the faithfulness guardrail. The shipped code decodes
+> via **`model.ln_final(stack) @ W_U + b_U`**, which on the bridge is a `NormalizationBridge`:
+> faithful to ~2.5e-5 AND architecture-general (handles RMSNorm). **Do not "restore"
+> `apply_ln_to_stack`.** See `tests/test_faithfulness.py` and the [[glassbox-gotchas]] memory.
+>
+> **What's still open (carried forward, NOT a redo):**
+> - **Gemma-3-1B gate (Phase 0.5):** never ran — `HF_TOKEN` is unset. It's in the registry as
+>   `loaded:false`; the API (503 path), UI (disabled option), and faithfulness test (skip-with-reason)
+>   already handle it. To finish: accept the `google/gemma-3-1b-pt` license on HuggingFace,
+>   `export HF_TOKEN`, then `uv run pytest tests/test_faithfulness.py` — the Gemma cases run
+>   automatically. If green, the dropdown carries two models with no code change.
+> - **Push / PR:** commits are local on `feat/v2` only.
+>
+> **What's next → Weekend 3** (see bottom "Out of scope"): attention-pattern views + layer
+> ablation (this is where D3 enters). Build it on the same extract→decode→build→serve→render spine.
+>
+> **How to run what exists:** `uv run uvicorn glassbox.api:app` (warms GPT-2), then
+> `cd web && npm run dev` → http://localhost:5173. `uv run pytest` for the faithfulness net;
+> `uv run python scripts/run_logit_lens.py` for the CLI/heatmap.
+
 **Audience:** a coding agent executing against the `akhil2308/glassbox` repo, `feat/v1` branch.
 **Goal of this milestone:** make the logit lens **live** — wrap it in FastAPI and render it in a
 minimal React page — while migrating the core to TransformerLens 3.0's `TransformerBridge` so the
