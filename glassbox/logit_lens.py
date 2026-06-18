@@ -19,9 +19,9 @@ tests/ is the guardrail that protects this invariant.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 import torch
+
+from glassbox.schemas import LayerPrediction, LogitLensResult, TokenJourney
 
 
 @torch.no_grad()
@@ -65,62 +65,61 @@ def decode_stack(model, accum, positions=None):
     return layer_logits.softmax(dim=-1)
 
 
-@dataclass
-class LayerPrediction:
-    """The logit-lens readout at one layer, for the prediction position."""
+def build_result(model, prompt, model_name, tokens, logits, accum, labels) -> LogitLensResult:
+    """Shape decoded tensors into a `LogitLensResult`. The single numerics → objects boundary.
 
-    layer: int            # 0 == embeddings only; n_layers == full model output
-    label: str            # human label, e.g. "0_pre", "final_post"
-    top_token: str        # the model's top guess decoded here
-    top_prob: float       # softmax probability of that guess
-    # probability mass the *final* answer already has at this layer — lets us watch it sharpen
-    answer_prob: float
-
-
-@dataclass
-class LogitLensResult:
-    prompt: str
-    str_tokens: list[str]          # the prompt split into tokens, as the model sees them
-    final_top_token: str           # the model's actual top prediction (full forward pass)
-    layers: list[LayerPrediction]  # one entry per layer (+ embeddings)
-
-
-def build_result(model, prompt, logits, accum, labels, position) -> LogitLensResult:
-    """Shape decoded tensors into a result object. The single numerics → objects boundary.
-
-    (Phase 1 replaces this with pydantic schemas and an all-positions result; for now it
-    keeps the single-position dataclass shape the weekend-1 script depends on.)
+    Decodes *every* position so the UI can show any token's journey up the residual stream.
+    `answer_prob` for a position tracks that position's own final-layer top token (the cleanest
+    "answer materializes upward" reading is on the last position).
     """
     str_tokens = model.to_str_tokens(prompt)
-    probs = decode_stack(model, accum, positions=position)[:, 0, :]  # [n_layers+1, d_vocab]
+    probs = decode_stack(model, accum, positions=None)  # [n_layers+1, n_pos, d_vocab]
+    n_pos = probs.shape[1]
 
-    final_top_id = int(logits[0, position].argmax())
+    final_top_id = int(logits[0, -1].argmax())
     final_top_token = model.to_single_str_token(final_top_id)
 
-    layers: list[LayerPrediction] = []
-    for i, label in enumerate(labels):
-        layer_probs = probs[i]
-        top_id = int(layer_probs.argmax())
-        layers.append(
-            LayerPrediction(
-                layer=i,
-                label=label,
-                top_token=model.to_single_str_token(top_id),
-                top_prob=float(layer_probs[top_id]),
-                answer_prob=float(layer_probs[final_top_id]),
+    bos_id = getattr(model.tokenizer, "bos_token_id", None)
+    token_ids = tokens[0].tolist()
+
+    journeys: list[TokenJourney] = []
+    for pos in range(n_pos):
+        # Each position's own final-layer prediction is what its journey converges toward.
+        pos_final_top_id = int(logits[0, pos].argmax())
+        layers: list[LayerPrediction] = []
+        for i, label in enumerate(labels):
+            layer_probs = probs[i, pos]
+            top_id = int(layer_probs.argmax())
+            layers.append(
+                LayerPrediction(
+                    layer=i,
+                    label=label,
+                    top_token=model.to_single_str_token(top_id),
+                    top_prob=float(layer_probs[top_id]),
+                    answer_prob=float(layer_probs[pos_final_top_id]),
+                )
+            )
+        journeys.append(
+            TokenJourney(
+                position=pos,
+                str_token=str_tokens[pos],
+                is_bos=(pos == 0 and bos_id is not None and token_ids[pos] == bos_id),
+                layers=layers,
             )
         )
 
     return LogitLensResult(
         prompt=prompt,
+        model_name=model_name,
         str_tokens=str_tokens,
         final_top_token=final_top_token,
-        layers=layers,
+        tokens=journeys,
     )
 
 
-def logit_lens(model, prompt: str, position: int = -1) -> LogitLensResult:
-    """Convenience wrapper: extract → decode → build for a single position (default: last)."""
+def logit_lens(model, prompt: str, model_name: str | None = None) -> LogitLensResult:
+    """Convenience wrapper: extract → decode → build, for all positions."""
+    model_name = model_name or getattr(model.cfg, "model_name", "model")
     tokens = model.to_tokens(prompt)
     logits, _cache, accum, labels = extract_resid_stack(model, tokens)
-    return build_result(model, prompt, logits, accum, labels, position)
+    return build_result(model, prompt, model_name, tokens, logits, accum, labels)

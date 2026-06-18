@@ -50,12 +50,16 @@ def main() -> None:
         res = logit_lens(model, prompt)
         results.append(res)
 
+        # The last token is the one whose job is to predict what comes next — its journey is
+        # the "answer materializes upward" story.
+        last = res.tokens[-1]
+
         print("=" * 72)
         print(f"PROMPT: {prompt!r}")
         print(f"  final prediction: {res.final_top_token!r}")
         print(f"  {'layer':>20}  {'top guess':<14}  p(top)   p(answer)")
         print(f"  {'-' * 20}  {'-' * 14}  {'-' * 6}   {'-' * 9}")
-        for lp in res.layers:
+        for lp in last.layers:
             mark = "  <- answer emerges" if lp.top_token == res.final_top_token else ""
             print(
                 f"  {lp.label:>20}  {lp.top_token!r:<14}  "
@@ -69,9 +73,9 @@ def main() -> None:
 def _save_heatmap(results) -> None:
     """One row per prompt, one column per layer; color = how much mass the final answer has."""
     os.makedirs(OUT_DIR, exist_ok=True)
-    n_layers = len(results[0].layers)
+    n_layers = len(results[0].tokens[-1].layers)
 
-    grid = np.array([[lp.answer_prob for lp in r.layers] for r in results])
+    grid = np.array([[lp.answer_prob for lp in r.tokens[-1].layers] for r in results])
 
     fig, ax = plt.subplots(figsize=(12, 4.5))
     im = ax.imshow(grid, aspect="auto", cmap="magma", vmin=0, vmax=1)
@@ -84,7 +88,7 @@ def _save_heatmap(results) -> None:
 
     # Annotate each cell with the layer's own top guess so you can read the assembly.
     for i, r in enumerate(results):
-        for j, lp in enumerate(r.layers):
+        for j, lp in enumerate(r.tokens[-1].layers):
             ax.text(
                 j, i, lp.top_token.strip()[:6],
                 ha="center", va="center", fontsize=6,
