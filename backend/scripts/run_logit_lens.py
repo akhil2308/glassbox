@@ -6,7 +6,7 @@ upward.
 
     uv run python scripts/run_logit_lens.py
     uv run python scripts/run_logit_lens.py --prompt "Water is made of hydrogen and"
-    uv run python scripts/run_logit_lens.py --prompt "2 plus 2 equals" --prompt "The capital of France is"
+    uv run python scripts/run_logit_lens.py --prompt "2 plus 2 equals" --prompt "Hello"
 """
 
 from __future__ import annotations
@@ -35,7 +35,10 @@ OUT_DIR = os.path.join(os.path.dirname(__file__), "..", "outputs")
 def main() -> None:
     parser = argparse.ArgumentParser(description="Logit lens over GPT-2-small")
     parser.add_argument(
-        "--prompt", dest="prompts", action="append", metavar="TEXT",
+        "--prompt",
+        dest="prompts",
+        action="append",
+        metavar="TEXT",
         help="Prompt to run (can be repeated). Omit to use the built-in set.",
     )
     args = parser.parse_args()
@@ -90,8 +93,12 @@ def _save_heatmap(results) -> None:
     for i, r in enumerate(results):
         for j, lp in enumerate(r.tokens[-1].layers):
             ax.text(
-                j, i, lp.top_token.strip()[:6],
-                ha="center", va="center", fontsize=6,
+                j,
+                i,
+                lp.top_token.strip()[:6],
+                ha="center",
+                va="center",
+                fontsize=6,
                 color="white" if lp.answer_prob < 0.5 else "black",
             )
 

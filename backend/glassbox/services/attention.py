@@ -14,8 +14,8 @@ from __future__ import annotations
 
 import torch
 
-from glassbox.schemas import AttentionResult
-from glassbox.tokens import bos_flags
+from glassbox.schemas.results import AttentionResult
+from glassbox.services.tokens import bos_flags
 
 # Decimal places kept when serializing weights. The payload is n_layers·n_heads·q·k floats; the
 # lens only ranks/visualizes these, so 4 dp is plenty and roughly halves the JSON size.
@@ -30,9 +30,7 @@ def extract_attention(model, tokens):
     softmax over keys; the model is causal, so the strictly-upper-triangular half is 0.
     """
     _logits, cache = model.run_with_cache(tokens)
-    return torch.stack(
-        [cache["pattern", layer][0] for layer in range(model.cfg.n_layers)]
-    )
+    return torch.stack([cache["pattern", layer][0] for layer in range(model.cfg.n_layers)])
 
 
 def build_attention_result(model, prompt, model_name, tokens, patterns) -> AttentionResult:

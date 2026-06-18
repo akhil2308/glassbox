@@ -16,7 +16,4 @@ def bos_flags(model, tokens) -> list[bool]:
     """
     bos_id = getattr(model.tokenizer, "bos_token_id", None)
     token_ids = tokens[0].tolist()
-    return [
-        pos == 0 and bos_id is not None and tid == bos_id
-        for pos, tid in enumerate(token_ids)
-    ]
+    return [pos == 0 and bos_id is not None and tid == bos_id for pos, tid in enumerate(token_ids)]

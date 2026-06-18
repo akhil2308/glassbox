@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import torch
 
-from glassbox.schemas import AblationEffect, AblationResult
+from glassbox.schemas.results import AblationEffect, AblationResult
 
 # What each component zeroes. Zeroing a block's writes to the residual stream makes it an identity
 # map for that token's vector — i.e. deletes the layer's contribution.
@@ -88,7 +88,9 @@ def build_ablation_result(
     )
 
 
-def ablation(model, prompt: str, component: str = "block", model_name: str | None = None) -> AblationResult:
+def ablation(
+    model, prompt: str, component: str = "block", model_name: str | None = None
+) -> AblationResult:
     """Convenience wrapper: extract → build."""
     model_name = model_name or getattr(model.cfg, "model_name", "model")
     tokens = model.to_tokens(prompt)

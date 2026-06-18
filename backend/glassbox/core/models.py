@@ -57,9 +57,7 @@ def load_model(model_name: str, device: str | None = None) -> TransformerBridge:
     architectures and reproduces the real forward logits.
     """
     if model_name not in REGISTRY:
-        raise KeyError(
-            f"Unknown model {model_name!r}. Known models: {sorted(REGISTRY)}"
-        )
+        raise KeyError(f"Unknown model {model_name!r}. Known models: {sorted(REGISTRY)}")
 
     entry = REGISTRY[model_name]
     if entry["gated"] and not os.environ.get("HF_TOKEN"):
