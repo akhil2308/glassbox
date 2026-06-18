@@ -10,9 +10,12 @@ from __future__ import annotations
 import pytest
 import torch
 
-from glassbox.attention import extract_attention
-from glassbox.models import load_model
+from glassbox.core.models import load_model
+from glassbox.services.attention import extract_attention
 from tests.test_faithfulness import PROMPTS
+
+# Every test here boots a real model.
+pytestmark = pytest.mark.slow
 
 
 @pytest.fixture(scope="session")

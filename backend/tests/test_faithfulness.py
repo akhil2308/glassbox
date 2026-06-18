@@ -23,8 +23,8 @@ import os
 import pytest
 import torch
 
-from glassbox.logit_lens import decode_stack, extract_resid_stack
-from glassbox.models import REGISTRY, load_model
+from glassbox.core.models import REGISTRY, load_model
+from glassbox.services.logit_lens import decode_stack, extract_resid_stack
 
 PROMPTS = [
     "The capital of France is",
@@ -54,6 +54,7 @@ def gpt2():
     return load_model("gpt2", device="cpu")
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("prompt", PROMPTS)
 def test_gpt2_top_layer_matches_forward(gpt2, prompt):
     model = gpt2
@@ -72,15 +73,16 @@ def test_gpt2_top_layer_matches_forward(gpt2, prompt):
         normed = model.ln_final(accum[:, 0, -1, :])
         b_U = getattr(model, "b_U", 0)
         top_layer_logits = (normed @ model.W_U + b_U)[-1]
-        assert torch.allclose(
-            top_layer_logits, logits[0, -1], atol=1e-3
-        ), f"decode unfaithful (allclose) for {prompt!r}"
+        assert torch.allclose(top_layer_logits, logits[0, -1], atol=1e-3), (
+            f"decode unfaithful (allclose) for {prompt!r}"
+        )
 
 
 # --- Gemma gate: non-blocking. Runs only if HF_TOKEN is present and the license is accepted.
 gemma_reason = "Gemma gate deferred: needs HF_TOKEN + accepted license (non-blocking per plan)"
 
 
+@pytest.mark.slow
 @pytest.mark.skipif(not os.environ.get("HF_TOKEN"), reason=gemma_reason)
 @pytest.mark.parametrize("prompt", PROMPTS)
 def test_gemma_top_layer_matches_forward(prompt):
@@ -97,6 +99,6 @@ def test_gemma_top_layer_matches_forward(prompt):
 
 def test_registry_is_data_only():
     # The registry must stay plain config data (no callables) — loader behavior lives elsewhere.
-    for name, entry in REGISTRY.items():
+    for _name, entry in REGISTRY.items():
         assert {"hf_name", "gated", "display"} <= entry.keys()
         assert not any(callable(v) for v in entry.values())
