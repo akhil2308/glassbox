@@ -22,6 +22,7 @@ from __future__ import annotations
 import torch
 
 from glassbox.schemas import LayerPrediction, LogitLensResult, TokenJourney
+from glassbox.tokens import bos_flags
 
 
 @torch.no_grad()
@@ -79,8 +80,7 @@ def build_result(model, prompt, model_name, tokens, logits, accum, labels) -> Lo
     final_top_id = int(logits[0, -1].argmax())
     final_top_token = model.to_single_str_token(final_top_id)
 
-    bos_id = getattr(model.tokenizer, "bos_token_id", None)
-    token_ids = tokens[0].tolist()
+    is_bos = bos_flags(model, tokens)
 
     journeys: list[TokenJourney] = []
     for pos in range(n_pos):
@@ -103,7 +103,7 @@ def build_result(model, prompt, model_name, tokens, logits, accum, labels) -> Lo
             TokenJourney(
                 position=pos,
                 str_token=str_tokens[pos],
-                is_bos=(pos == 0 and bos_id is not None and token_ids[pos] == bos_id),
+                is_bos=is_bos[pos],
                 layers=layers,
             )
         )

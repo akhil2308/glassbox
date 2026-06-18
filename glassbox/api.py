@@ -16,13 +16,16 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from glassbox.ablation import ablation
+from glassbox.attention import attention
 from glassbox.logit_lens import logit_lens
 from glassbox.manager import ModelManager
 from glassbox.models import REGISTRY
-from glassbox.schemas import LogitLensResult
+from glassbox.schemas import AblationResult, AttentionResult, LogitLensResult
 
 MAX_PROMPT_TOKENS = 128
 DEFAULT_MODEL = "gpt2"
+ABLATION_COMPONENTS = ("block", "attn", "mlp")
 
 # CORS origins are config-driven; default to the Vite dev server.
 CORS_ORIGINS = os.environ.get(
@@ -49,9 +52,13 @@ app.add_middleware(
 )
 
 
-class LogitLensRequest(BaseModel):
+class PromptRequest(BaseModel):
     prompt: str = Field(min_length=1)
     model: str = DEFAULT_MODEL
+
+
+class AblationRequest(PromptRequest):
+    component: str = "block"
 
 
 class ModelInfo(BaseModel):
@@ -59,6 +66,32 @@ class ModelInfo(BaseModel):
     display_name: str
     gated: bool
     loaded: bool
+
+
+def _resolve_model(req: PromptRequest):
+    """Shared handler preamble: validate the model, load it, cap the prompt length.
+
+    Returns the loaded bridge. Raises the API's standard HTTPExceptions:
+      400 unknown model · 503 gated without HF_TOKEN · 422 prompt too long.
+    """
+    if req.model not in REGISTRY:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown model {req.model!r}. Known: {sorted(REGISTRY)}",
+        )
+    try:
+        model = app.state.manager.get(req.model)
+    except PermissionError as exc:
+        # Gated model requested without HF_TOKEN — actionable, no stack trace.
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    n_tokens = model.to_tokens(req.prompt).shape[1]
+    if n_tokens > MAX_PROMPT_TOKENS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Prompt is {n_tokens} tokens; max is {MAX_PROMPT_TOKENS}.",
+        )
+    return model
 
 
 @app.get("/models", response_model=list[ModelInfo])
@@ -86,26 +119,25 @@ def health():
 
 
 # Plain `def` (not async): FastAPI runs sync handlers in a threadpool, so the CPU-bound
-# forward pass won't block the event loop.
+# forward passes won't block the event loop.
 @app.post("/logit-lens", response_model=LogitLensResult)
-def run_logit_lens(req: LogitLensRequest) -> LogitLensResult:
-    if req.model not in REGISTRY:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unknown model {req.model!r}. Known: {sorted(REGISTRY)}",
-        )
+def run_logit_lens(req: PromptRequest) -> LogitLensResult:
+    model = _resolve_model(req)
+    return logit_lens(model, req.prompt, model_name=req.model)
 
-    try:
-        model = app.state.manager.get(req.model)
-    except PermissionError as exc:
-        # Gated model requested without HF_TOKEN — actionable, no stack trace.
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
-    n_tokens = model.to_tokens(req.prompt).shape[1]
-    if n_tokens > MAX_PROMPT_TOKENS:
+@app.post("/attention", response_model=AttentionResult)
+def run_attention(req: PromptRequest) -> AttentionResult:
+    model = _resolve_model(req)
+    return attention(model, req.prompt, model_name=req.model)
+
+
+@app.post("/ablation", response_model=AblationResult)
+def run_ablation(req: AblationRequest) -> AblationResult:
+    if req.component not in ABLATION_COMPONENTS:
         raise HTTPException(
             status_code=422,
-            detail=f"Prompt is {n_tokens} tokens; max is {MAX_PROMPT_TOKENS}.",
+            detail=f"Unknown component {req.component!r}. Known: {list(ABLATION_COMPONENTS)}",
         )
-
-    return logit_lens(model, req.prompt, model_name=req.model)
+    model = _resolve_model(req)
+    return ablation(model, req.prompt, component=req.component, model_name=req.model)

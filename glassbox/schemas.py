@@ -39,3 +39,39 @@ class LogitLensResult(BaseModel):
     str_tokens: list[str]          # the prompt split into tokens, as the model sees them
     final_top_token: str           # the model's actual top prediction at the last position
     tokens: list[TokenJourney]     # one journey per prompt token
+
+
+class AttentionResult(BaseModel):
+    """Every layer's per-head attention pattern: who (query) looks at whom (key)."""
+
+    model_name: str
+    prompt: str
+    str_tokens: list[str]
+    is_bos: list[bool]                          # position 0's BOS row/col is meaningless — UI dims it
+    n_layers: int
+    n_heads: int
+    # patterns[layer][head][query][key] — each query row softmaxes to 1 over keys; the model is
+    # causal, so key > query entries are 0. Weights are rounded to keep the JSON payload small.
+    patterns: list[list[list[list[float]]]]
+
+
+class AblationEffect(BaseModel):
+    """What ablating one layer's contribution does to the last position's prediction."""
+
+    layer: int
+    ablated_top_token: str      # the model's new top guess once this layer is neutralized
+    ablated_top_prob: float
+    # Probability the *baseline* answer still gets once this layer is ablated. Low = the layer was
+    # load-bearing for that answer.
+    answer_prob: float
+    answer_kept: bool           # did the top-1 prediction survive ablating this layer?
+
+
+class AblationResult(BaseModel):
+    model_name: str
+    prompt: str
+    str_tokens: list[str]
+    component: str                       # "block" | "attn" | "mlp" — what got zeroed per layer
+    baseline_top_token: str              # the model's real top prediction, nothing ablated
+    baseline_top_prob: float
+    effects: list[AblationEffect]        # one per layer
