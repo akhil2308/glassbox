@@ -32,6 +32,37 @@ export interface LogitLensResult {
   tokens: TokenJourney[];
 }
 
+export interface AttentionResult {
+  model_name: string;
+  prompt: string;
+  str_tokens: string[];
+  is_bos: boolean[];
+  n_layers: number;
+  n_heads: number;
+  // patterns[layer][head][query][key]
+  patterns: number[][][][];
+}
+
+export interface AblationEffect {
+  layer: number;
+  ablated_top_token: string;
+  ablated_top_prob: number;
+  answer_prob: number;
+  answer_kept: boolean;
+}
+
+export interface AblationResult {
+  model_name: string;
+  prompt: string;
+  str_tokens: string[];
+  component: string;
+  baseline_top_token: string;
+  baseline_top_prob: number;
+  effects: AblationEffect[];
+}
+
+export type AblationComponent = "block" | "attn" | "mlp";
+
 // Thrown with a user-facing message derived from the API's status + detail.
 export class ApiError extends Error {
   status: number;
@@ -64,11 +95,12 @@ export async function fetchHealth(): Promise<{ device: string; loaded_models: st
   return res.json();
 }
 
-export async function runLogitLens(prompt: string, model: string): Promise<LogitLensResult> {
-  const res = await fetch(`${BASE}/logit-lens`, {
+// Shared POST: serialize body, raise a friendly ApiError on failure (gated models get a hint).
+async function post<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ prompt, model }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     let msg = await detail(res);
@@ -76,4 +108,20 @@ export async function runLogitLens(prompt: string, model: string): Promise<Logit
     throw new ApiError(res.status, msg);
   }
   return res.json();
+}
+
+export function runLogitLens(prompt: string, model: string): Promise<LogitLensResult> {
+  return post("/logit-lens", { prompt, model });
+}
+
+export function runAttention(prompt: string, model: string): Promise<AttentionResult> {
+  return post("/attention", { prompt, model });
+}
+
+export function runAblation(
+  prompt: string,
+  model: string,
+  component: AblationComponent,
+): Promise<AblationResult> {
+  return post("/ablation", { prompt, model, component });
 }
