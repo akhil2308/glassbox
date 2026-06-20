@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as d3 from "d3";
 import type { AttentionResult } from "../api";
+import { color, font, rampCss } from "../theme";
 
-// Background intensity for a heatmap cell, weight in [0,1] (violet on dark) — matches the lens grid.
+// Background intensity for a heatmap cell, weight in [0,1] — shares the ramp with the lens views.
 function weightStyle(w: number): React.CSSProperties {
   return {
-    backgroundColor: `rgba(139, 92, 246, ${0.04 + 0.96 * w})`,
-    color: w > 0.55 ? "#0b0f17" : "#cbd5e1",
+    backgroundColor: rampCss(w, 0.04 + 0.96 * w),
+    color: w > 0.55 ? color.bg : color.textMd,
   };
 }
 
@@ -28,15 +29,21 @@ export function AttentionView({ result }: { result: AttentionResult }) {
       <div className="flex flex-wrap gap-3 items-center text-sm">
         <Selector label="layer" value={layer} count={result.n_layers} onChange={setLayer} />
         <Selector label="head" value={head} count={result.n_heads} onChange={setHead} />
-        <div className="ml-auto flex rounded-md border border-slate-700 overflow-hidden">
+        <div
+          className="ml-auto flex rounded-md overflow-hidden"
+          style={{ border: `1px solid ${color.border}` }}
+        >
           {(["arcs", "heatmap"] as const).map((m) => (
             <button
               key={m}
               onClick={() => setMode(m)}
-              className={
-                "px-3 py-1 text-xs " +
-                (mode === m ? "bg-violet-600 text-white" : "bg-slate-800 text-slate-300 hover:bg-slate-700")
-              }
+              className="gb-segbtn px-3 py-1 text-xs"
+              style={{
+                fontFamily: font.ui,
+                backgroundColor: mode === m ? color.accent : color.surface,
+                color: mode === m ? color.bg : color.textMd,
+                fontWeight: mode === m ? 700 : 400,
+              }}
             >
               {m}
             </button>
@@ -44,7 +51,7 @@ export function AttentionView({ result }: { result: AttentionResult }) {
         </div>
       </div>
 
-      <p className="text-xs text-slate-500">
+      <p className="text-xs" style={{ fontFamily: font.ui, color: color.textLo }}>
         Row = a token deciding where to look (query); column/target = the token it attends to (key).
         A causal model only looks backward, so the upper-right is empty.
       </p>
@@ -70,10 +77,16 @@ function Selector({
   onChange: (v: number) => void;
 }) {
   return (
-    <label className="flex items-center gap-1 text-slate-400">
+    <label className="flex items-center gap-1" style={{ fontFamily: font.ui, color: color.textLo }}>
       {label}
       <select
-        className="rounded-md bg-slate-800 border border-slate-700 px-2 py-1 outline-none text-slate-200"
+        className="gb-select rounded-md px-2 py-1 outline-none"
+        style={{
+          fontFamily: font.mono,
+          backgroundColor: color.surface,
+          border: `1px solid ${color.border}`,
+          color: color.textHi,
+        }}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
       >
@@ -102,15 +115,23 @@ function Heatmap({
     <div className="overflow-x-auto">
       <div className="inline-grid gap-px" style={{ gridTemplateColumns: gridCols }}>
         {/* corner + key (column) header */}
-        <div className="bg-slate-900 text-[10px] text-slate-600 px-1 py-1 text-right">q ╲ k</div>
+        <div
+          className="text-[10px] px-1 py-1 text-right"
+          style={{ backgroundColor: color.bg, color: color.textDim, fontFamily: font.mono }}
+        >
+          q ╲ k
+        </div>
         {tokens.map((t, k) => (
           <div
             key={k}
             title={t}
-            className={
-              "text-[10px] px-1 py-1 text-center truncate border-b border-slate-700 " +
-              (isBos[k] ? "text-slate-600 italic" : "text-slate-300")
-            }
+            className="text-[10px] px-1 py-1 text-center truncate"
+            style={{
+              fontFamily: font.mono,
+              borderBottom: `1px solid ${color.border}`,
+              color: isBos[k] ? color.textDim : color.textMd,
+              fontStyle: isBos[k] ? "italic" : "normal",
+            }}
           >
             {isBos[k] ? "BOS" : label(t)}
           </div>
@@ -142,22 +163,25 @@ function Row({
     <>
       <div
         title={qt}
-        className={
-          "sticky left-0 bg-slate-900 text-[10px] px-1 py-1 text-right truncate " +
-          (isBos[q] ? "text-slate-600 italic" : "text-slate-400")
-        }
+        className="sticky left-0 text-[10px] px-1 py-1 text-right truncate"
+        style={{
+          backgroundColor: color.bg,
+          fontFamily: font.mono,
+          color: isBos[q] ? color.textDim : color.textMd,
+          fontStyle: isBos[q] ? "italic" : "normal",
+        }}
       >
         {isBos[q] ? "BOS" : label(qt)}
       </div>
       {tokens.map((_, k) => {
         const w = pattern[q][k];
         // Causal: a query never attends to a future key — leave those blank.
-        if (k > q) return <div key={k} className="bg-slate-900/40" />;
+        if (k > q) return <div key={k} style={{ backgroundColor: "rgba(13,27,30,0.4)" }} />;
         return (
           <div
             key={k}
             className="text-[10px] px-1 py-1 text-center tabular-nums cursor-default"
-            style={weightStyle(w)}
+            style={{ ...weightStyle(w), fontFamily: font.mono }}
             title={`${qt} → ${tokens[k]}\nweight: ${(w * 100).toFixed(1)}%`}
           >
             {w >= 0.005 ? (w * 100).toFixed(0) : ""}
@@ -217,7 +241,7 @@ function ArcDiagram({
         return `M ${x1} ${baseY} Q ${(x1 + x2) / 2} ${baseY - lift} ${x2} ${baseY}`;
       })
       .attr("fill", "none")
-      .attr("stroke", "#8b5cf6")
+      .attr("stroke", color.accent)
       .attr("stroke-width", (d) => 0.5 + d.w * 3)
       .attr("stroke-opacity", (d) =>
         hover == null ? 0.12 + 0.85 * d.w : d.q === hover || d.k === hover ? 0.2 + 0.8 * d.w : 0.03,
@@ -236,19 +260,23 @@ function ArcDiagram({
 
     g.append("circle")
       .attr("r", 4)
-      .attr("fill", (i) => (isBos[i] ? "#475569" : i === hover ? "#c4b5fd" : "#8b5cf6"));
+      .attr("fill", (i) => (isBos[i] ? color.textDim : i === hover ? color.accentLight : color.accent));
 
     g.append("text")
       .attr("transform", "rotate(40)")
       .attr("x", 8)
       .attr("y", 4)
       .attr("font-size", 10)
-      .attr("fill", (i) => (isBos[i] ? "#64748b" : i === hover ? "#ddd6fe" : "#cbd5e1"))
+      .attr("font-family", font.mono)
+      .attr("fill", (i) => (isBos[i] ? color.textLo : i === hover ? color.textHi : color.textMd))
       .text((i) => (isBos[i] ? "BOS" : label(tokens[i])));
   }, [arcs, tokens, isBos, hover, colW, baseY, width]);
 
   return (
-    <div className="overflow-x-auto rounded-md border border-slate-800 bg-slate-900/40">
+    <div
+      className="overflow-x-auto rounded-md"
+      style={{ border: `1px solid ${color.border}`, backgroundColor: "rgba(13,27,30,0.4)" }}
+    >
       <svg ref={ref} width={width} height={height} />
     </div>
   );

@@ -14,9 +14,12 @@ import {
 } from "./api";
 import { PromptBar } from "./components/PromptBar";
 import { StatusBar } from "./components/StatusBar";
-import { LogitLensGrid } from "./components/LogitLensGrid";
+import { LogitLensSection } from "./components/LogitLensSection";
 import { AttentionView } from "./components/AttentionView";
 import { AblationView } from "./components/AblationView";
+import { EmptyState } from "./components/EmptyState";
+import { LoadingOverlay } from "./components/LoadingOverlay";
+import { color, font } from "./theme";
 
 type View = "lens" | "attention" | "ablation";
 
@@ -86,21 +89,25 @@ export default function App() {
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-4">
       <header>
-        <h1 className="text-2xl font-semibold text-slate-100">GLASSBOX</h1>
-        <p className="text-sm text-slate-400">{blurb}</p>
+        <h1 className="text-2xl font-semibold" style={{ fontFamily: font.ui, color: color.textHi }}>
+          GLASSBOX
+        </h1>
+        <p className="text-sm" style={{ fontFamily: font.ui, color: color.textMd }}>
+          {blurb}
+        </p>
       </header>
 
-      <nav className="flex gap-1 border-b border-slate-800">
+      <nav className="flex gap-1" style={{ borderBottom: `1px solid ${color.border}` }}>
         {TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setView(t.id)}
-            className={
-              "px-3 py-2 text-sm -mb-px border-b-2 " +
-              (view === t.id
-                ? "border-violet-500 text-violet-300"
-                : "border-transparent text-slate-400 hover:text-slate-200")
-            }
+            className="gb-nav-tab px-3 py-2 text-sm -mb-px"
+            style={{
+              fontFamily: font.ui,
+              borderBottom: `2px solid ${view === t.id ? color.accent : "transparent"}`,
+              color: view === t.id ? color.accent : color.textMd,
+            }}
           >
             {t.label}
           </button>
@@ -120,38 +127,37 @@ export default function App() {
       <StatusBar model={activeModelName ?? null} device={device} latencyMs={latencyMs} />
 
       {error && (
-        <div className="rounded-md border border-red-800 bg-red-950/50 text-red-300 text-sm px-3 py-2">
+        <div
+          className="rounded-md text-sm px-3 py-2"
+          style={{
+            fontFamily: font.ui,
+            border: `1px solid ${color.danger}`,
+            backgroundColor: color.dangerBg,
+            color: color.danger,
+          }}
+        >
           {error}
         </div>
       )}
 
-      {view === "lens" &&
-        (lens ? (
-          <div className="space-y-2">
-            <p className="text-sm text-slate-400">
-              final prediction:{" "}
-              <span className="text-violet-300 font-medium">
-                {lens.final_top_token.trim() || "·"}
-              </span>
-              <span className="text-slate-600"> · click a token column to pin its journey</span>
-            </p>
-            <LogitLensGrid result={lens} />
-          </div>
-        ) : (
-          <Empty busy={busy} error={error} />
-        ))}
+      {view === "lens" && <LogitLensSection result={lens} busy={busy} error={error} />}
 
       {view === "attention" &&
-        (attn ? <AttentionView result={attn} /> : <Empty busy={busy} error={error} />)}
+        (attn ? (
+          <div className="relative">
+            <AttentionView result={attn} />
+            <LoadingOverlay active={busy} />
+          </div>
+        ) : busy || error ? null : (
+          <EmptyState />
+        ))}
 
       {view === "ablation" && (
-        <AblationView result={abl} component={component} setComponent={setComponent} />
+        <div className="relative">
+          <AblationView result={abl} component={component} setComponent={setComponent} />
+          <LoadingOverlay active={busy && abl != null} />
+        </div>
       )}
     </div>
   );
-}
-
-function Empty({ busy, error }: { busy: boolean; error: string | null }) {
-  if (busy || error) return null;
-  return <p className="text-sm text-slate-500">Enter a prompt and hit Run.</p>;
 }

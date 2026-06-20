@@ -1,0 +1,238 @@
+import { useEffect, useMemo, useState } from "react";
+import type { LayerPrediction, LogitLensResult } from "../api";
+import { color, font, ramp, rampCss } from "../theme";
+
+const rgbCss = (c: [number, number, number]) => `rgb(${c[0]},${c[1]},${c[2]})`;
+
+// Default focus = the last token: its journey is the one that actually
+// produces the model's next-token prediction (the others aren't "the answer").
+function lastNonBos(result: LogitLensResult): number {
+  const nonBos = result.tokens.filter((t) => !t.is_bos);
+  const t = nonBos[nonBos.length - 1];
+  return t ? t.position : result.tokens[result.tokens.length - 1].position;
+}
+
+function prefersReducedMotion(): boolean {
+  return typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+}
+
+// One token's journey up the residual stream, read bottom (embeddings) to top (output).
+// Colour/glow at each layer track p(final answer); a dashed rule marks where it first locks in.
+export function LogitLensStream({ result }: { result: LogitLensResult }) {
+  const [trackedResult, setTrackedResult] = useState(result);
+  const [resultId, setResultId] = useState(0);
+  const [focus, setFocus] = useState<number>(() => lastNonBos(result));
+  if (trackedResult !== result) {
+    setTrackedResult(result);
+    setFocus(lastNonBos(result));
+    setResultId((id) => id + 1);
+  }
+  const [replayNonce, setReplayNonce] = useState(0);
+
+  const token = result.tokens.find((t) => t.position === focus) ?? result.tokens[0];
+  const layers = token.layers;
+  const nLayers = layers.length - 1;
+
+  return (
+    <div>
+      <div className="flex flex-wrap gap-2 items-center mb-3">
+        {result.tokens.map((t) => {
+          const active = t.position === focus;
+          return (
+            <button
+              key={t.position}
+              onClick={() => !t.is_bos && setFocus(t.position)}
+              title={t.is_bos ? "beginning of sequence" : t.str_token}
+              className="gb-token-chip rounded-md px-2.5 py-1 text-xs"
+              style={{
+                fontFamily: font.mono,
+                color: t.is_bos ? color.textDim : active ? color.bg : color.textMd,
+                backgroundColor: active ? color.accent : color.surface,
+                border: `1px solid ${active ? color.accent : color.border}`,
+                fontStyle: t.is_bos ? "italic" : "normal",
+                fontWeight: active ? 700 : 400,
+                cursor: t.is_bos ? "default" : "pointer",
+              }}
+            >
+              {t.is_bos ? "BOS" : t.str_token.trim() || "␣"}
+            </button>
+          );
+        })}
+        <button
+          onClick={() => setReplayNonce((n) => n + 1)}
+          className="gb-btn ml-auto rounded-md px-2.5 py-1 text-xs"
+          style={{
+            fontFamily: font.ui,
+            color: color.textMd,
+            backgroundColor: "transparent",
+            border: `1px solid ${color.border}`,
+            cursor: "pointer",
+          }}
+        >
+          ↻ replay
+        </button>
+      </div>
+
+      <Channel
+        key={`${resultId}-${focus}-${replayNonce}`}
+        layers={layers}
+        nLayers={nLayers}
+        finalTopToken={result.final_top_token}
+      />
+
+      <div className="flex items-center gap-4 flex-wrap mt-4">
+        <Legend p={0.05} label="noise" />
+        <Legend p={0.5} label="forming" />
+        <Legend p={1} label="locked" />
+        <span className="ml-auto text-xs" style={{ fontFamily: font.ui, color: color.textLo }}>
+          colour tracks p(answer) at each layer height
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// Remounted (via key) whenever the focused token, result, or a replay request changes —
+// each fresh mount runs the reveal animation once from its initial state.
+function Channel({
+  layers,
+  nLayers,
+  finalTopToken,
+}: {
+  layers: LayerPrediction[];
+  nLayers: number;
+  finalTopToken: string;
+}) {
+  const reduce = prefersReducedMotion();
+  const [progress, setProgress] = useState(reduce ? nLayers : -1);
+
+  useEffect(() => {
+    if (reduce) return;
+    const id = setInterval(() => {
+      setProgress((p) => {
+        if (p >= nLayers) {
+          clearInterval(id);
+          return p;
+        }
+        return p + 1;
+      });
+    }, 110);
+    return () => clearInterval(id);
+  }, [reduce, nLayers]);
+
+  const lockLayer = useMemo(() => {
+    const f = finalTopToken.trim();
+    const hit = layers.find((l) => l.top_token.trim() === f);
+    return hit ? hit.layer : null;
+  }, [layers, finalTopToken]);
+
+  return (
+    <div className="relative">
+      <div
+        className="text-center mb-1.5"
+        style={{ fontFamily: font.mono, fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: color.textLo }}
+      >
+        output
+      </div>
+
+      {[...layers].reverse().map((l) => {
+        const reached = l.layer <= progress;
+        const c = ramp(reached ? l.answer_prob : 0);
+        const hot = l.answer_prob > 0.55;
+        const locked = lockLayer != null && l.layer === lockLayer;
+        return (
+          <div key={l.layer}>
+            {locked && (
+              <div className="relative my-2" style={{ borderTop: `1px dashed rgba(255,207,92,0.5)` }}>
+                <span
+                  className="absolute right-0"
+                  style={{
+                    top: -8,
+                    fontFamily: font.mono,
+                    fontSize: 10,
+                    color: "rgb(255,207,92)",
+                    backgroundColor: color.bg,
+                    padding: "0 6px",
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  answer locks · layer {lockLayer}
+                </span>
+              </div>
+            )}
+            <div
+              className="flex items-stretch gap-3"
+              style={{ height: 40 }}
+              title={`top: ${l.top_token}  ·  p(top) ${(l.top_prob * 100).toFixed(1)}%  ·  p(${finalTopToken.trim()}) ${(l.answer_prob * 100).toFixed(1)}%`}
+            >
+              <div className="flex flex-col justify-center items-end text-right" style={{ width: 88 }}>
+                <span style={{ fontFamily: font.mono, fontSize: 13, color: color.textMd, lineHeight: 1 }}>
+                  {l.layer}
+                </span>
+                <span style={{ fontFamily: font.mono, fontSize: 9.5, color: color.textDim, lineHeight: 1.4 }}>
+                  {l.label}
+                </span>
+              </div>
+
+              <div
+                className="flex-1 flex items-center justify-center rounded-md"
+                style={{
+                  border: "1px solid",
+                  borderColor: locked ? "rgba(255,207,92,0.55)" : color.border,
+                  backgroundColor: reached ? rampCss(l.answer_prob, 0.16 + 0.8 * l.answer_prob) : "rgba(20,40,44,0.35)",
+                  boxShadow:
+                    reached && l.answer_prob > 0.15
+                      ? `0 0 ${6 + l.answer_prob * 26}px ${rampCss(l.answer_prob, 0.25 + 0.5 * l.answer_prob)}`
+                      : "none",
+                  transition: "background-color .25s ease, box-shadow .25s ease",
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: font.mono,
+                    fontSize: 14,
+                    color: reached ? (hot ? color.bg : rgbCss(c)) : color.textDim,
+                    fontWeight: hot ? 700 : 500,
+                    opacity: reached ? 1 : 0.5,
+                    transition: "color .25s ease, opacity .25s ease",
+                  }}
+                >
+                  {reached ? l.top_token.trim() || "·" : "·"}
+                </span>
+              </div>
+
+              <div className="flex flex-col justify-center gap-1" style={{ width: 60 }}>
+                <span style={{ fontFamily: font.mono, fontSize: 12, lineHeight: 1, color: reached ? rgbCss(c) : color.textDim }}>
+                  {reached ? `${(l.answer_prob * 100).toFixed(0)}%` : "—"}
+                </span>
+                <div className="rounded overflow-hidden" style={{ height: 3, backgroundColor: color.surface }}>
+                  <div
+                    className="h-full rounded"
+                    style={{
+                      width: `${reached ? l.answer_prob * 100 : 0}%`,
+                      backgroundColor: rgbCss(c),
+                      transition: "width .25s ease",
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
+      <div className="text-center mt-2" style={{ fontFamily: font.mono, fontSize: 10.5, color: color.textLo }}>
+        embeddings · raw lookup, no thinking yet
+      </div>
+    </div>
+  );
+}
+
+function Legend({ p, label }: { p: number; label: string }) {
+  return (
+    <span className="flex items-center gap-1.5 text-xs" style={{ fontFamily: font.mono, color: color.textMd }}>
+      <i className="inline-block rounded" style={{ width: 11, height: 11, backgroundColor: rampCss(p) }} />
+      {label}
+    </span>
+  );
+}

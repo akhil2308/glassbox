@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import * as d3 from "d3";
 import type { AblationComponent, AblationResult } from "../api";
+import { color, font } from "../theme";
 
 const COMPONENTS: { value: AblationComponent; label: string }[] = [
   { value: "block", label: "whole block" },
@@ -21,10 +22,16 @@ export function AblationView({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-3 items-center text-sm">
-        <label className="flex items-center gap-1 text-slate-400">
+        <label className="flex items-center gap-1" style={{ fontFamily: font.ui, color: color.textLo }}>
           ablate
           <select
-            className="rounded-md bg-slate-800 border border-slate-700 px-2 py-1 outline-none text-slate-200"
+            className="gb-select rounded-md px-2 py-1 outline-none"
+            style={{
+              fontFamily: font.mono,
+              backgroundColor: color.surface,
+              border: `1px solid ${color.border}`,
+              color: color.textHi,
+            }}
             value={component}
             onChange={(e) => setComponent(e.target.value as AblationComponent)}
           >
@@ -35,19 +42,19 @@ export function AblationView({
             ))}
           </select>
         </label>
-        <span className="text-xs text-slate-500">
+        <span className="text-xs" style={{ fontFamily: font.ui, color: color.textLo }}>
           re-run after changing this — each bar is the model run with that one layer deleted
         </span>
       </div>
 
       {result && (
         <>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm" style={{ fontFamily: font.ui, color: color.textMd }}>
             baseline prediction:{" "}
-            <span className="text-violet-300 font-medium">
+            <span style={{ fontFamily: font.mono, color: color.accent, fontWeight: 500 }}>
               {result.baseline_top_token.trim() || "·"}
             </span>{" "}
-            <span className="text-slate-600">
+            <span style={{ color: color.textLo }}>
               ({(result.baseline_top_prob * 100).toFixed(1)}%) · taller/redder bar = deleting that
               layer hurt the prediction more
             </span>
@@ -94,15 +101,15 @@ function BarChart({ result }: { result: AblationResult }) {
     g.append("g")
       .attr("transform", `translate(0,${innerH})`)
       .call(d3.axisBottom(x).tickSizeOuter(0))
-      .call((sel) => sel.selectAll("text").attr("fill", "#94a3b8").attr("font-size", 9))
-      .call((sel) => sel.selectAll("line,path").attr("stroke", "#334155"));
+      .call((sel) => sel.selectAll("text").attr("fill", color.textMd).attr("font-size", 9).attr("font-family", font.mono))
+      .call((sel) => sel.selectAll("line,path").attr("stroke", color.border));
     g.append("g")
       .call(d3.axisLeft(y).ticks(4).tickFormat((d) => `${(+d * 100).toFixed(0)}%`))
-      .call((sel) => sel.selectAll("text").attr("fill", "#94a3b8").attr("font-size", 9))
-      .call((sel) => sel.selectAll("line,path").attr("stroke", "#334155"));
+      .call((sel) => sel.selectAll("text").attr("fill", color.textMd).attr("font-size", 9).attr("font-family", font.mono))
+      .call((sel) => sel.selectAll("line,path").attr("stroke", color.border));
 
-    // bars: red intensity tracks damage; a gold cap marks layers where the prediction flipped.
-    const color = d3.scaleSequential(d3.interpolateInferno).domain([0, base || 1]);
+    // bars: damage intensity, a gold cap marks layers where the prediction flipped.
+    const damageColor = d3.scaleSequential(d3.interpolateInferno).domain([0, base || 1]);
     g.selectAll("rect.bar")
       .data(data)
       .join("rect")
@@ -111,7 +118,7 @@ function BarChart({ result }: { result: AblationResult }) {
       .attr("y", (d) => y(d.drop))
       .attr("width", x.bandwidth())
       .attr("height", (d) => innerH - y(d.drop))
-      .attr("fill", (d) => (d.answer_kept ? color(d.drop) : "#f59e0b"))
+      .attr("fill", (d) => (d.answer_kept ? damageColor(d.drop) : "rgb(255,207,92)"))
       .append("title")
       .text(
         (d) =>
@@ -123,13 +130,17 @@ function BarChart({ result }: { result: AblationResult }) {
       .attr("x", innerW / 2)
       .attr("y", innerH + 26)
       .attr("text-anchor", "middle")
-      .attr("fill", "#64748b")
+      .attr("fill", color.textLo)
       .attr("font-size", 10)
+      .attr("font-family", font.ui)
       .text("layer (gold bar = top prediction changed when this layer was deleted)");
   }, [result]);
 
   return (
-    <div className="overflow-x-auto rounded-md border border-slate-800 bg-slate-900/40 p-2">
+    <div
+      className="overflow-x-auto rounded-md p-2"
+      style={{ border: `1px solid ${color.border}`, backgroundColor: "rgba(13,27,30,0.4)" }}
+    >
       <svg ref={ref} width={Math.max(360, result.effects.length * 46)} height={240} />
     </div>
   );

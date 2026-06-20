@@ -1,4 +1,21 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap");
 @import "tailwindcss";
+
+/* Keep in sync with src/theme.ts (color/font) — this block exists only for
+   plain-CSS hover/focus rules that inline styles can't reach. */
+:root {
+  --bg: #0d1b1e;
+  --surface: #13282c;
+  --border: #1f3a3f;
+  --text-hi: #eafff6;
+  --text-md: #c4d6d4;
+  --text-lo: #5b7a7e;
+  --text-dim: #3a5358;
+  --accent: #34d3bc;
+  --accent-light: #7ee8d8;
+  --font-ui: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+}
 
 html,
 body,
@@ -8,8 +25,29 @@ body,
 
 body {
   margin: 0;
-  background: #0b0f17;
-  color: #e5e7eb;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text-hi);
+  font-family: var(--font-ui);
   -webkit-font-smoothing: antialiased;
+}
+
+.gb-input:focus,
+.gb-select:focus {
+  border-color: var(--accent) !important;
+}
+
+.gb-nav-tab:hover {
+  color: var(--text-hi) !important;
+}
+
+.gb-token-chip:hover {
+  color: var(--accent) !important;
+}
+
+.gb-btn:hover {
+  filter: brightness(1.1);
+}
+
+.gb-segbtn:hover {
+  background-color: var(--border) !important;
 }

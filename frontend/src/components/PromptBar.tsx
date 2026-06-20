@@ -1,4 +1,5 @@
 import type { ModelInfo } from "../api";
+import { color, font } from "../theme";
 
 // Text input + model picker + Run button. No <form> — plain handlers, per the plan.
 export function PromptBar({
@@ -21,7 +22,13 @@ export function PromptBar({
   return (
     <div className="flex gap-2 items-stretch">
       <input
-        className="flex-1 rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-sm outline-none focus:border-violet-500"
+        className="gb-input flex-1 rounded-md px-3 py-2 text-sm outline-none"
+        style={{
+          fontFamily: font.ui,
+          backgroundColor: color.surface,
+          border: `1px solid ${color.border}`,
+          color: color.textHi,
+        }}
         placeholder="Type a prompt, e.g. The capital of France is"
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
@@ -30,7 +37,13 @@ export function PromptBar({
         }}
       />
       <select
-        className="rounded-md bg-slate-800 border border-slate-700 px-2 py-2 text-sm outline-none"
+        className="gb-select rounded-md px-2 py-2 text-sm outline-none"
+        style={{
+          fontFamily: font.mono,
+          backgroundColor: color.surface,
+          border: `1px solid ${color.border}`,
+          color: color.textHi,
+        }}
         value={model}
         onChange={(e) => setModel(e.target.value)}
       >
@@ -42,7 +55,8 @@ export function PromptBar({
         ))}
       </select>
       <button
-        className="rounded-md bg-violet-600 hover:bg-violet-500 disabled:opacity-50 px-4 py-2 text-sm font-medium"
+        className="gb-btn rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50"
+        style={{ fontFamily: font.ui, backgroundColor: color.accent, color: color.bg }}
         onClick={onRun}
         disabled={busy || prompt.trim().length === 0}
       >

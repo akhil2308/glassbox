@@ -1,0 +1,24 @@
+# Dependencies
+**/node_modules/
+backend/.venv/
+
+# Build output
+frontend/dist/
+frontend/dist-ssr/
+
+# Caches
+backend/.pytest_cache/
+backend/.ruff_cache/
+**/__pycache__/
+
+# Generated artifacts
+backend/outputs/*.png
+
+# Lockfiles (large, rarely useful to read in full)
+frontend/package-lock.json
+backend/uv.lock
+
+# Logs / local env
+*.log
+.env
+.env.*
