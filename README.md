@@ -3,34 +3,58 @@
 See what a language model is thinking, layer by layer. **Logit lens · attention patterns ·
 layer ablation** — built on TransformerLens + FastAPI + React.
 
-## What it does
+<p align="center">
+  <img src="docs/simulate.png" alt="GLASSBOX simulating generation — watching each next token assemble layer by layer" width="800">
+</p>
 
-Three views of the same forward pass, decoding GPT-2-small (any registered model, really):
+## Why this exists
+
+A transformer doesn't predict the next word in one shot. It builds the answer gradually: a
+stack of hidden vectors — the *residual stream* — passes upward through dozens of layers,
+each one nudging the guess a little closer. Normally none of that is visible; you see the
+prompt go in and a token come out.
+
+GLASSBOX makes the middle visible. The core trick is the **logit lens**: take the residual
+stream *as it is at every layer* and decode it through the model's own output head, as if the
+model had to commit to an answer right there. Do that at all layers and you can literally watch
+a prediction get assembled — vague early, sharpening as it climbs, snapping to the final token
+near the top.
+
+It ships three lenses on the same forward pass:
 
 - **Logit lens** — decode the residual stream at *every* layer and watch the next-token
-  prediction get assembled as data flows upward.
+  prediction take shape as data flows upward.
 - **Attention** — per-layer, per-head `[query, key]` patterns: which tokens look at which.
 - **Ablation** — zero a layer's writes to the residual stream and measure what breaks, layer by
   layer, to find the load-bearing ones.
 
-## Layout
+Default model is GPT-2-small, but any registered checkpoint works.
 
-```
-backend/    FastAPI service + the interpretability core (Python, uv).
-            app/{main,api,core,services,schemas} — see backend internals below.
-frontend/   React + Vite + D3 UI (TypeScript).
-plans/      Design notes and the weekend roadmap.
-```
+## Features
 
-**Backend internals** (`backend/app/`):
+### Logit lens
 
-- `main.py` — the FastAPI app: lifespan, CORS, router wiring. Nothing else.
-- `api/` — `routers/` (one `APIRouter` per endpoint) and `deps.py` (shared `resolve_model`).
-- `core/` — `config.py` (settings), `manager.py` (resident-model LRU cache), `models.py`
-  (registry + loader).
-- `services/` — the numerics: `logit_lens.py`, `attention.py`, `ablation.py`, `tokens.py`. Each
-  is the single boundary where tensors become JSON-serializable result objects.
-- `schemas/` — `requests.py` (request bodies) and `results.py` (response shapes the frontend mirrors).
+<img src="docs/lens.png" alt="Logit lens grid — residual stream decoded at every layer" width="800">
+
+A layer × token grid of what the model would predict if it stopped at each layer. Read bottom
+to top and watch the prediction firm up — early layers hedge, upper layers converge. Hit
+**Simulate** and it runs autoregressively, feeding each generated token back in so you see the
+lens evolve token by token.
+
+### Attention
+
+<img src="docs/attention.png" alt="Attention heatmap — per-head query/key pattern" width="800">
+
+See which tokens look at which, per layer and head. Each head is a `[query, key]` heatmap, so
+the recognizable patterns — diagonals, previous-token heads, induction — jump out visually.
+
+### Ablation
+
+<img src="docs/ablation.png" alt="Ablation view — prediction damage per layer" width="800">
+
+Delete a layer's contribution to the residual stream and measure how much the prediction breaks.
+Sweeping layer by layer surfaces the load-bearing ones: the spikes are where the model actually
+does the work.
 
 ## Quickstart
 
@@ -50,6 +74,25 @@ There's also a standalone CLI demo that renders a heatmap to `backend/outputs/`:
 ```bash
 cd backend && uv run python scripts/run_logit_lens.py
 ```
+
+## Layout
+
+```
+backend/    FastAPI service + the interpretability core (Python, uv).
+            app/{main,api,core,services,schemas} — see backend internals below.
+frontend/   React + Vite + D3 UI (TypeScript).
+plans/      Design notes and the weekend roadmap.
+```
+
+**Backend internals** (`backend/app/`):
+
+- `main.py` — the FastAPI app: lifespan, CORS, router wiring. Nothing else.
+- `api/` — `routers/` (one `APIRouter` per endpoint) and `deps.py` (shared `resolve_model`).
+- `core/` — `config.py` (settings), `manager.py` (resident-model LRU cache), `models.py`
+  (registry + loader).
+- `services/` — the numerics: `logit_lens.py`, `attention.py`, `ablation.py`, `tokens.py`. Each
+  is the single boundary where tensors become JSON-serializable result objects.
+- `schemas/` — `requests.py` (request bodies) and `results.py` (response shapes the frontend mirrors).
 
 ## Make targets
 
