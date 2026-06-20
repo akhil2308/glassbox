@@ -1,5 +1,6 @@
 import type { ModelInfo } from "../api";
 import { color, font } from "../theme";
+import { Select } from "./Select";
 
 // Text input + model picker + Run button. No <form> — plain handlers, per the plan.
 export function PromptBar({
@@ -38,25 +39,19 @@ export function PromptBar({
         }}
       />
       <div className="flex gap-2 items-stretch">
-        <select
-          className="gb-select flex-1 sm:flex-initial rounded-md px-2 py-2 text-sm outline-none min-w-0"
-          style={{
-            fontFamily: font.mono,
-            backgroundColor: color.surface,
-            border: `1px solid ${color.border}`,
-            color: color.textHi,
-          }}
-          aria-label="Model"
+        <Select
+          className="flex-1 sm:flex-initial sm:w-56 text-sm"
+          width="100%"
+          mono
+          ariaLabel="Model"
           value={model}
-          onChange={(e) => setModel(e.target.value)}
-        >
-          {models.map((m) => (
-            <option key={m.name} value={m.name} disabled={m.gated && !m.loaded}>
-              {m.display_name}
-              {m.gated && !m.loaded ? " (locked)" : ""}
-            </option>
-          ))}
-        </select>
+          onChange={setModel}
+          options={models.map((m) => ({
+            value: m.name,
+            label: m.display_name + (m.gated && !m.loaded ? " (locked)" : ""),
+            disabled: m.gated && !m.loaded,
+          }))}
+        />
         <button
           className="gb-btn shrink-0 rounded-md px-4 py-2 text-sm font-semibold disabled:opacity-50"
           style={{ fontFamily: font.ui, backgroundColor: color.accent, color: color.bg }}

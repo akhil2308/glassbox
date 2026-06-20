@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as d3 from "d3";
 import type { AttentionResult } from "../api";
 import { color, font, rampCss } from "../theme";
+import { Select } from "./Select";
 
 // Background intensity for a heatmap cell, weight in [0,1] — shares the ramp with the lens views.
 function weightStyle(w: number): React.CSSProperties {
@@ -79,24 +80,14 @@ function Selector({
   return (
     <label className="flex items-center gap-1" style={{ fontFamily: font.ui, color: color.textLo }}>
       {label}
-      <select
-        className="gb-select rounded-md px-2 py-1 outline-none"
-        style={{
-          fontFamily: font.mono,
-          backgroundColor: color.surface,
-          border: `1px solid ${color.border}`,
-          color: color.textHi,
-        }}
-        aria-label={label}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-      >
-        {[...Array(count).keys()].map((i) => (
-          <option key={i} value={i}>
-            {i}
-          </option>
-        ))}
-      </select>
+      <Select
+        width={56}
+        mono
+        ariaLabel={label}
+        value={String(value)}
+        onChange={(v) => onChange(Number(v))}
+        options={[...Array(count).keys()].map((i) => ({ value: String(i), label: String(i) }))}
+      />
     </label>
   );
 }

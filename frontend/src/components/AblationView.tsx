@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import * as d3 from "d3";
 import type { AblationComponent, AblationResult } from "../api";
 import { color, font, ramp } from "../theme";
+import { Select } from "./Select";
 
 const COMPONENTS: { value: AblationComponent; label: string }[] = [
   { value: "block", label: "whole block" },
@@ -24,24 +25,14 @@ export function AblationView({
       <div className="flex flex-wrap gap-3 items-center text-sm">
         <label className="flex items-center gap-1" style={{ fontFamily: font.ui, color: color.textLo }}>
           ablate
-          <select
-            className="gb-select rounded-md px-2 py-1 outline-none"
-            style={{
-              fontFamily: font.mono,
-              backgroundColor: color.surface,
-              border: `1px solid ${color.border}`,
-              color: color.textHi,
-            }}
-            aria-label="Component to ablate"
+          <Select
+            width={144}
+            mono
+            ariaLabel="Component to ablate"
             value={component}
-            onChange={(e) => setComponent(e.target.value as AblationComponent)}
-          >
-            {COMPONENTS.map((c) => (
-              <option key={c.value} value={c.value}>
-                {c.label}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => setComponent(v as AblationComponent)}
+            options={COMPONENTS}
+          />
         </label>
         <span className="text-xs" style={{ fontFamily: font.ui, color: color.textLo }}>
           re-run after changing this — each bar is the model run with that one layer deleted
