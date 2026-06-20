@@ -3,6 +3,7 @@ import * as d3 from "d3";
 import type { AblationComponent, AblationResult } from "../api";
 import { color, font, ramp } from "../theme";
 import { Select } from "./Select";
+import { Explainer } from "./Explainer";
 
 const COMPONENTS: { value: AblationComponent; label: string }[] = [
   { value: "block", label: "whole block" },
@@ -22,6 +23,26 @@ export function AblationView({
 }) {
   return (
     <div className="gb-fade-up space-y-3">
+      <Explainer title="What am I looking at?">
+        <p>
+          We take the model apart one piece at a time: delete a single layer (zero it out), re-run
+          the exact same prompt, and measure how badly the model's <em>own</em> original prediction
+          suffers. Each bar is one of those experiments.
+        </p>
+        <p>
+          A <strong>taller, brighter bar</strong> means removing that layer hurt the prediction more
+          — that layer was doing real work. A <strong style={{ color: color.lockGold }}>gold bar</strong>{" "}
+          means deleting the layer changed the top prediction entirely; the model broke. You can also
+          ablate just the attention or just the MLP within each layer.
+        </p>
+        <p style={{ color: color.textLo }}>
+          Why it's useful: layers aren't equally important. This is a causal test, not a correlation
+          — the Logit lens shows you what information is <em>present</em>, but ablation shows which
+          parts are actually <em>load-bearing</em>. Usually a handful of layers carry the prediction
+          while the rest are nearly redundant.
+        </p>
+      </Explainer>
+
       <div className="flex flex-wrap gap-3 items-center text-sm">
         <label className="flex items-center gap-1" style={{ fontFamily: font.ui, color: color.textLo }}>
           ablate

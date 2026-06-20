@@ -157,7 +157,10 @@ export default function App() {
             role="tab"
             aria-selected={view === t.id}
             aria-controls={`panel-${t.id}`}
-            onClick={() => setView(t.id)}
+            onClick={() => {
+              setView(t.id);
+              setLatencyMs(null); // each tab's latency is per-run; don't carry it across tabs
+            }}
             className="gb-nav-tab gb-btn rounded-md px-3 py-1.5 text-sm"
             style={{
               fontFamily: font.ui,
@@ -180,6 +183,7 @@ export default function App() {
           setModel={setModel}
           onRun={onRun}
           busy={busy}
+          showSimulate={view === "lens"}
           onSimulate={onSimulate}
           onStop={onStop}
           simulating={simulating}

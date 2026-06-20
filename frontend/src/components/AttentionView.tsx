@@ -3,6 +3,7 @@ import * as d3 from "d3";
 import type { AttentionResult } from "../api";
 import { color, font, rampCss } from "../theme";
 import { Select } from "./Select";
+import { Explainer } from "./Explainer";
 
 // Background intensity for a heatmap cell, weight in [0,1] — shares the ramp with the lens views.
 function weightStyle(w: number): React.CSSProperties {
@@ -27,6 +28,26 @@ export function AttentionView({ result }: { result: AttentionResult }) {
 
   return (
     <div className="gb-fade-up space-y-3">
+      <Explainer title="What am I looking at?">
+        <p>
+          Every layer reads the sentence through several <strong>attention heads</strong>. A head's
+          job is to decide, for each token, which <em>earlier</em> tokens it should pull information
+          from — that's how the model carries meaning across a sentence instead of reading each word
+          in isolation.
+        </p>
+        <p>
+          In <strong>arcs</strong>, each token sits on the line and an arc shows it reaching back to
+          another token; brighter and thicker means a stronger pull. The <strong>heatmap</strong>{" "}
+          shows the same thing as a grid — each row reaches across to the columns it attends to.
+        </p>
+        <p style={{ color: color.textLo }}>
+          Why it's useful: this is the model's wiring diagram. Heads specialize — one tracks the
+          previous word, another links a pronoun back to its noun, another copies a name it saw
+          earlier. Flipping through layers and heads is exactly how researchers discovered the
+          "induction heads" behind in-context learning.
+        </p>
+      </Explainer>
+
       <div className="flex flex-wrap gap-3 items-center text-sm">
         <Selector label="layer" value={layer} count={result.n_layers} onChange={setLayer} />
         <Selector label="head" value={head} count={result.n_heads} onChange={setHead} />

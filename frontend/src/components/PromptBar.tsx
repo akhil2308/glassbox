@@ -2,6 +2,15 @@ import type { ModelInfo } from "../api";
 import { color, font } from "../theme";
 import { Select } from "./Select";
 
+// Starter prompts chosen to make each view's pattern obvious: factual recall (lens/ablation),
+// the classic induction setup (attention), and a sequence the model must continue by copying.
+const EXAMPLES = [
+  "The capital of France is",
+  "When John and Mary went to the store, John gave a drink to",
+  "The Eiffel Tower is located in the city of",
+  "1, 2, 3, 4,",
+];
+
 // Text input + model picker + Run button. No <form> — plain handlers, per the plan.
 export function PromptBar({
   prompt,
@@ -11,6 +20,7 @@ export function PromptBar({
   setModel,
   onRun,
   busy,
+  showSimulate,
   onSimulate,
   onStop,
   simulating,
@@ -28,6 +38,7 @@ export function PromptBar({
   setModel: (v: string) => void;
   onRun: () => void;
   busy: boolean;
+  showSimulate: boolean; // simulate + generation settings only apply to the lens tab
   onSimulate: () => void;
   onStop: () => void;
   simulating: boolean;
@@ -101,24 +112,51 @@ export function PromptBar({
             "Run"
           )}
         </button>
-        <button
-          className="gb-btn shrink-0 rounded-md px-4 py-2 text-sm font-semibold disabled:opacity-50"
-          style={{
-            fontFamily: font.ui,
-            backgroundColor: simulating ? color.danger : color.surfaceRaised,
-            color: simulating ? color.bg : color.accent,
-            border: `1px solid ${simulating ? color.danger : color.accent}`,
-          }}
-          aria-label={simulating ? "Stop generation" : "Simulate generation"}
-          onClick={simulating ? onStop : onSimulate}
-          disabled={!simulating && (busy || prompt.trim().length === 0)}
-        >
-          {simulating ? "Stop" : "Simulate →"}
-        </button>
+        {showSimulate && (
+          <button
+            className="gb-btn shrink-0 rounded-md px-4 py-2 text-sm font-semibold disabled:opacity-50"
+            style={{
+              fontFamily: font.ui,
+              backgroundColor: simulating ? color.danger : color.surfaceRaised,
+              color: simulating ? color.bg : color.accent,
+              border: `1px solid ${simulating ? color.danger : color.accent}`,
+            }}
+            aria-label={simulating ? "Stop generation" : "Simulate generation"}
+            onClick={simulating ? onStop : onSimulate}
+            disabled={!simulating && (busy || prompt.trim().length === 0)}
+          >
+            {simulating ? "Stop" : "Simulate →"}
+          </button>
+        )}
       </div>
     </div>
 
+    {/* One-click starter prompts — fill the input so newcomers see a meaningful pattern fast. */}
+    <div className="flex flex-wrap items-center gap-1.5 px-1">
+      <span className="text-xs shrink-0" style={{ fontFamily: font.ui, color: color.textLo }}>
+        try
+      </span>
+      {EXAMPLES.map((ex) => (
+        <button
+          key={ex}
+          onClick={() => setPrompt(ex)}
+          disabled={simulating}
+          className="gb-btn rounded-full px-2.5 py-0.5 text-xs disabled:opacity-50 truncate max-w-[16rem]"
+          style={{
+            fontFamily: font.mono,
+            backgroundColor: prompt === ex ? color.accent : color.surface,
+            color: prompt === ex ? color.bg : color.textMd,
+            border: `1px solid ${prompt === ex ? color.accent : color.border}`,
+          }}
+          title={ex}
+        >
+          {ex}
+        </button>
+      ))}
+    </div>
+
     {/* Generation settings: how many tokens, how fast. Sliders avoid native spinner clutter. */}
+    {showSimulate && (
     <div
       className="flex flex-wrap items-center gap-x-6 gap-y-1.5 px-1 text-xs"
       style={{ fontFamily: font.ui, color: color.textLo }}
@@ -169,6 +207,7 @@ export function PromptBar({
         <span className="shrink-0">animate layers</span>
       </label>
     </div>
+    )}
    </div>
   );
 }
