@@ -114,6 +114,34 @@ export function runLogitLens(prompt: string, model: string): Promise<LogitLensRe
   return post("/logit-lens", { prompt, model });
 }
 
+// Autoregressive generation: feed the predicted token back in and re-run, one /logit-lens call
+// per token. Each frame re-renders the stream view focused on the newest token. Greedy —
+// final_top_token is already argmax. `cancelled()` lets a Stop button halt within one frame.
+// onFrame gets the lens result plus the prompt text that produced it (matches result.tokens),
+// so the prompt box can grow in lockstep with the chips.
+// maxTokens+1 passes: the final extra pass re-runs over the full text so the last generated
+// token also lands as a clickable chip, not just as the previous step's prediction.
+export async function runSimulate(
+  prompt: string,
+  model: string,
+  maxTokens: number,
+  delayMs: number,
+  onFrame: (r: LogitLensResult, promptSoFar: string) => void,
+  cancelled: () => boolean,
+): Promise<void> {
+  let p = prompt;
+  for (let i = 0; i <= maxTokens && !cancelled(); i++) {
+    const r = await runLogitLens(p, model);
+    onFrame(r, p);
+    if (i === maxTokens) break;
+    // ponytail: re-tokenize the appended string each step; for GPT-2 BPE this round-trips
+    // ~always. Pass token ids instead if drift ever shows.
+    p += r.final_top_token;
+    // Pace generation so each token stays readable; the loop re-checks cancelled() after.
+    if (delayMs > 0) await new Promise((res) => setTimeout(res, delayMs));
+  }
+}
+
 export function runAttention(prompt: string, model: string): Promise<AttentionResult> {
   return post("/attention", { prompt, model });
 }

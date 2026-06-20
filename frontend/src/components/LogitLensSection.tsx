@@ -12,10 +12,18 @@ export function LogitLensSection({
   result,
   busy,
   error,
+  simulating = false,
+  genFrom,
+  delayMs = 0,
+  animate = true,
 }: {
   result: LogitLensResult | null;
   busy: boolean;
   error: string | null;
+  simulating?: boolean;
+  genFrom?: number;
+  delayMs?: number;
+  animate?: boolean;
 }) {
   const [mode, setMode] = useState<Mode>("stream");
 
@@ -24,15 +32,20 @@ export function LogitLensSection({
   }
 
   return (
-    <div className="gb-fade-up space-y-3 relative" key={result.model_name + result.final_top_token}>
+    // key on model only — a Simulate run streams many results for the same model, so this stays
+    // mounted and updates in place instead of remounting (and re-flashing) every token.
+    <div className="gb-fade-up space-y-3 relative" key={result.model_name}>
       <div className="flex flex-wrap items-center gap-3">
         <p className="text-sm" style={{ fontFamily: font.ui, color: color.textMd }}>
-          final prediction:{" "}
+          {simulating ? "generating:" : "final prediction:"}{" "}
           <span style={{ fontFamily: font.mono, color: color.accent, fontWeight: 500 }}>
             {result.final_top_token.trim() || "·"}
           </span>
           {mode === "grid" && (
             <span style={{ color: color.textLo }}> · click a token column to see its journey in stream mode</span>
+          )}
+          {mode === "stream" && genFrom != null && (
+            <span style={{ color: color.textLo }}> · underlined tokens were generated — click one to see its journey</span>
           )}
         </p>
         <div
@@ -57,7 +70,11 @@ export function LogitLensSection({
         </div>
       </div>
 
-      {mode === "grid" ? <LogitLensGrid result={result} /> : <LogitLensStream result={result} />}
+      {mode === "grid" ? (
+        <LogitLensGrid result={result} genFrom={genFrom} />
+      ) : (
+        <LogitLensStream result={result} genFrom={genFrom} simulating={simulating} delayMs={delayMs} animate={animate} />
+      )}
 
       <LoadingOverlay active={busy} />
     </div>

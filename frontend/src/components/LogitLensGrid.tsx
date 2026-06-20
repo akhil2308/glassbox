@@ -8,11 +8,13 @@ function trunc(s: string): string {
 
 // Rows = layers (top = full model output, bottom = embeddings). Columns = prompt tokens.
 // Cell shows the layer's top-predicted token; color = answer_prob. BOS column is dimmed/labeled.
-export function LogitLensGrid({ result }: { result: LogitLensResult }) {
+// genFrom: positions >= genFrom were generated during a Simulate run — highlight them.
+export function LogitLensGrid({ result, genFrom }: { result: LogitLensResult; genFrom?: number }) {
   const tokens = result.tokens;
   const nLayers = tokens[0].layers.length;
   // Top row = highest layer, so the answer "climbs upward" as you read down-to-up.
   const layerOrder = [...Array(nLayers).keys()].reverse();
+  const isGen = (pos: number) => genFrom != null && pos >= genFrom;
 
   const gridCols = `3.5rem repeat(${tokens.length}, minmax(3.2rem, 1fr))`;
 
@@ -33,9 +35,10 @@ export function LogitLensGrid({ result }: { result: LogitLensResult }) {
             className="text-[10px] px-1 py-1 truncate text-center"
             style={{
               fontFamily: font.mono,
-              borderBottom: `1px solid ${color.border}`,
-              color: t.is_bos ? color.textDim : color.textMd,
+              borderBottom: `1px solid ${isGen(t.position) ? color.accent : color.border}`,
+              color: isGen(t.position) ? color.accent : t.is_bos ? color.textDim : color.textMd,
               fontStyle: t.is_bos ? "italic" : "normal",
+              fontWeight: isGen(t.position) ? 700 : 400,
             }}
           >
             {t.is_bos ? "BOS" : trunc(t.str_token)}
@@ -44,14 +47,22 @@ export function LogitLensGrid({ result }: { result: LogitLensResult }) {
 
         {/* body: one row per layer (top = full model) */}
         {layerOrder.map((li) => (
-          <Row key={li} layerIndex={li} tokens={tokens} />
+          <Row key={li} layerIndex={li} tokens={tokens} isGen={isGen} />
         ))}
       </div>
     </div>
   );
 }
 
-function Row({ layerIndex, tokens }: { layerIndex: number; tokens: TokenJourney[] }) {
+function Row({
+  layerIndex,
+  tokens,
+  isGen,
+}: {
+  layerIndex: number;
+  tokens: TokenJourney[];
+  isGen: (pos: number) => boolean;
+}) {
   const label = tokens[0].layers[layerIndex].label;
   return (
     <>
@@ -71,7 +82,11 @@ function Row({ layerIndex, tokens }: { layerIndex: number; tokens: TokenJourney[
           <div
             key={t.position}
             className="gb-card-raised text-[10px] px-1 py-1 text-center truncate cursor-default"
-            style={{ ...probCellStyle(lp.answer_prob), fontFamily: font.mono, border: "1px solid transparent" }}
+            style={{
+              ...probCellStyle(lp.answer_prob),
+              fontFamily: font.mono,
+              border: `1px solid ${isGen(t.position) ? color.accent : "transparent"}`,
+            }}
             title={`token: ${lp.top_token}\np(top): ${(lp.top_prob * 100).toFixed(1)}%\np(answer): ${(lp.answer_prob * 100).toFixed(1)}%`}
           >
             {trunc(lp.top_token)}

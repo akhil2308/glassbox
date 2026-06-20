@@ -59,9 +59,12 @@ Strict layering, each module a single responsibility:
 
 - `App.tsx` — single-page tab UI (`lens` / `attention` / `ablation`), one result slot per tab so
   switching tabs preserves the last render. `onRun` dispatches to the active tab's API call.
+  `onSimulate` drives autoregressive generation on the lens tab (see below).
 - `api.ts` — all backend calls; `ApiError` carries HTTP status + a friendly message (503 gets a
   "accept the license + set HF_TOKEN" hint appended). Types here are hand-mirrored from
   `backend/app/schemas/results.py` — there's no codegen, so update both sides together.
+  `runSimulate` loops `runLogitLens`, feeding `final_top_token` back into the prompt each step —
+  there is no backend generation endpoint; "generation" is just repeated single-token lens calls.
 - `components/` — one component per visual concern (`LogitLensGrid`/`LogitLensStream`/
   `LogitLensSection`, `AttentionView`, `AblationView`, plus `PromptBar`, `StatusBar`,
   `EmptyState`, `LoadingOverlay`).

@@ -11,6 +11,15 @@ export function PromptBar({
   setModel,
   onRun,
   busy,
+  onSimulate,
+  onStop,
+  simulating,
+  maxTokens,
+  setMaxTokens,
+  delayMs,
+  setDelayMs,
+  animate,
+  setAnimate,
 }: {
   prompt: string;
   setPrompt: (v: string) => void;
@@ -19,8 +28,21 @@ export function PromptBar({
   setModel: (v: string) => void;
   onRun: () => void;
   busy: boolean;
+  onSimulate: () => void;
+  onStop: () => void;
+  simulating: boolean;
+  maxTokens: number;
+  setMaxTokens: (v: number) => void;
+  delayMs: number;
+  setDelayMs: (v: number) => void;
+  animate: boolean;
+  setAnimate: (v: boolean) => void;
 }) {
+  const disabled = busy || simulating || prompt.trim().length === 0;
+  // Speed slider runs fast→slow left to right via delay; default 600ms is a readable pace.
+  const SPEED_MAX = 1500;
   return (
+   <div className="flex flex-col gap-2">
     <div className="flex flex-col sm:flex-row gap-2 items-stretch">
       <input
         className="gb-input flex-1 rounded-md px-3 py-2 text-sm outline-none min-w-0"
@@ -33,9 +55,10 @@ export function PromptBar({
         placeholder="Type a prompt, e.g. The capital of France is"
         aria-label="Prompt"
         value={prompt}
+        readOnly={simulating}
         onChange={(e) => setPrompt(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === "Enter" && !busy) onRun();
+          if (e.key === "Enter" && !disabled) onRun();
         }}
       />
       <div className="flex gap-2 items-stretch">
@@ -57,7 +80,7 @@ export function PromptBar({
           style={{ fontFamily: font.ui, backgroundColor: color.accent, color: color.bg }}
           aria-label="Run forward pass"
           onClick={onRun}
-          disabled={busy || prompt.trim().length === 0}
+          disabled={disabled}
         >
           {busy ? (
             <span className="inline-flex items-center gap-1" aria-hidden="true">
@@ -78,7 +101,74 @@ export function PromptBar({
             "Run"
           )}
         </button>
+        <button
+          className="gb-btn shrink-0 rounded-md px-4 py-2 text-sm font-semibold disabled:opacity-50"
+          style={{
+            fontFamily: font.ui,
+            backgroundColor: simulating ? color.danger : color.surfaceRaised,
+            color: simulating ? color.bg : color.accent,
+            border: `1px solid ${simulating ? color.danger : color.accent}`,
+          }}
+          aria-label={simulating ? "Stop generation" : "Simulate generation"}
+          onClick={simulating ? onStop : onSimulate}
+          disabled={!simulating && (busy || prompt.trim().length === 0)}
+        >
+          {simulating ? "Stop" : "Simulate →"}
+        </button>
       </div>
     </div>
+
+    {/* Generation settings: how many tokens, how fast. Sliders avoid native spinner clutter. */}
+    <div
+      className="flex flex-wrap items-center gap-x-6 gap-y-1.5 px-1 text-xs"
+      style={{ fontFamily: font.ui, color: color.textLo }}
+    >
+      <label className="flex items-center gap-2">
+        <span className="shrink-0">simulate</span>
+        <input
+          type="range"
+          min={1}
+          max={100}
+          value={maxTokens}
+          disabled={simulating}
+          onChange={(e) => setMaxTokens(Number(e.target.value))}
+          aria-label="Tokens to generate"
+          className="w-28 disabled:opacity-50"
+          style={{ accentColor: color.accent }}
+        />
+        <span className="shrink-0 tabular-nums" style={{ fontFamily: font.mono, color: color.textMd }}>
+          {maxTokens} tokens
+        </span>
+      </label>
+      <label className="flex items-center gap-2">
+        <span className="shrink-0">speed</span>
+        <input
+          type="range"
+          min={0}
+          max={SPEED_MAX}
+          step={100}
+          // Slider points fast→slow; invert so dragging right slows generation down.
+          value={SPEED_MAX - delayMs}
+          onChange={(e) => setDelayMs(SPEED_MAX - Number(e.target.value))}
+          aria-label="Generation speed"
+          className="w-28"
+          style={{ accentColor: color.accent }}
+        />
+        <span className="shrink-0 tabular-nums" style={{ fontFamily: font.mono, color: color.textMd }}>
+          {delayMs === 0 ? "instant" : `${(delayMs / 1000).toFixed(1)}s/tok`}
+        </span>
+      </label>
+      <label className="flex items-center gap-2 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={animate}
+          onChange={(e) => setAnimate(e.target.checked)}
+          className="cursor-pointer"
+          style={{ accentColor: color.accent }}
+        />
+        <span className="shrink-0">animate layers</span>
+      </label>
+    </div>
+   </div>
   );
 }

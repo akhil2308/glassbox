@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ApiError,
   fetchHealth,
@@ -6,6 +6,7 @@ import {
   runAblation,
   runAttention,
   runLogitLens,
+  runSimulate,
   type AblationComponent,
   type AblationResult,
   type AttentionResult,
@@ -58,6 +59,14 @@ export default function App() {
   const [device, setDevice] = useState<string | null>(null);
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
 
+  // Simulate (autoregressive generation) state.
+  const [simulating, setSimulating] = useState(false);
+  const [maxTokens, setMaxTokens] = useState(20);
+  const [delayMs, setDelayMs] = useState(600); // pause between generated tokens
+  const [animate, setAnimate] = useState(true); // play per-token layer reveal during a run
+  const [genFrom, setGenFrom] = useState<number | undefined>(undefined);
+  const cancelRef = useRef(false);
+
   useEffect(() => {
     fetchModels().then(setModels).catch((e) => setError(String(e.message ?? e)));
     fetchHealth().then((h) => setDevice(h.device)).catch(() => {});
@@ -66,6 +75,7 @@ export default function App() {
   async function onRun() {
     setBusy(true);
     setError(null);
+    setGenFrom(undefined);
     const t0 = performance.now();
     try {
       if (view === "lens") setLens(await runLogitLens(prompt, model));
@@ -80,6 +90,39 @@ export default function App() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function onSimulate() {
+    setView("lens");
+    setSimulating(true);
+    setError(null);
+    setGenFrom(undefined);
+    cancelRef.current = false;
+    try {
+      await runSimulate(
+        prompt,
+        model,
+        maxTokens,
+        delayMs,
+        (r, promptSoFar) => {
+          // First frame's token count = original prompt length; everything after is generated.
+          setGenFrom((g) => g ?? r.tokens.length);
+          setLens(r);
+          setPrompt(promptSoFar);
+        },
+        () => cancelRef.current,
+      );
+      fetchModels().then(setModels).catch(() => {});
+    } catch (e) {
+      const msg = e instanceof ApiError ? e.message : String((e as Error).message ?? e);
+      setError(msg);
+    } finally {
+      setSimulating(false);
+    }
+  }
+
+  function onStop() {
+    cancelRef.current = true;
   }
 
   const activeModelName =
@@ -137,6 +180,15 @@ export default function App() {
           setModel={setModel}
           onRun={onRun}
           busy={busy}
+          onSimulate={onSimulate}
+          onStop={onStop}
+          simulating={simulating}
+          maxTokens={maxTokens}
+          setMaxTokens={setMaxTokens}
+          delayMs={delayMs}
+          setDelayMs={setDelayMs}
+          animate={animate}
+          setAnimate={setAnimate}
         />
 
         <StatusBar model={activeModelName ?? null} device={device} latencyMs={latencyMs} />
@@ -159,7 +211,17 @@ export default function App() {
       )}
 
       <div role="tabpanel" id={`panel-${view}`}>
-        {view === "lens" && <LogitLensSection result={lens} busy={busy} error={error} />}
+        {view === "lens" && (
+          <LogitLensSection
+            result={lens}
+            busy={busy}
+            error={error}
+            simulating={simulating}
+            genFrom={genFrom}
+            delayMs={delayMs}
+            animate={animate}
+          />
+        )}
 
         {view === "attention" &&
           (attn ? (
