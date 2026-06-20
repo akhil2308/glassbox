@@ -29,7 +29,7 @@ Single backend test: `cd backend && uv run pytest tests/test_ablation.py::test_n
 Frontend type-check + build: `cd frontend && npm run build` (runs `tsc -b` then `vite build`).
 Standalone CLI demo (renders a heatmap to `backend/outputs/`): `cd backend && uv run python scripts/run_logit_lens.py`.
 
-## Backend architecture (`backend/glassbox/`)
+## Backend architecture (`backend/app/`)
 
 Strict layering, each module a single responsibility:
 
@@ -61,7 +61,7 @@ Strict layering, each module a single responsibility:
   switching tabs preserves the last render. `onRun` dispatches to the active tab's API call.
 - `api.ts` — all backend calls; `ApiError` carries HTTP status + a friendly message (503 gets a
   "accept the license + set HF_TOKEN" hint appended). Types here are hand-mirrored from
-  `backend/glassbox/schemas/results.py` — there's no codegen, so update both sides together.
+  `backend/app/schemas/results.py` — there's no codegen, so update both sides together.
 - `components/` — one component per visual concern (`LogitLensGrid`/`LogitLensStream`/
   `LogitLensSection`, `AttentionView`, `AblationView`, plus `PromptBar`, `StatusBar`,
   `EmptyState`, `LoadingOverlay`).

@@ -8,10 +8,10 @@ from __future__ import annotations
 
 from fastapi import HTTPException, Request
 
-from glassbox.core.config import settings
-from glassbox.core.manager import ModelManager
-from glassbox.core.models import REGISTRY
-from glassbox.schemas.requests import PromptRequest
+from app.core.config import settings
+from app.core.manager import ModelManager
+from app.core.models import REGISTRY
+from app.schemas.requests import PromptRequest
 
 
 def get_manager(request: Request) -> ModelManager:

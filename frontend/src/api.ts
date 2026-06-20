@@ -1,4 +1,4 @@
-// Talks to the FastAPI backend. Types mirror backend/glassbox/schemas/results.py.
+// Talks to the FastAPI backend. Types mirror backend/app/schemas/results.py.
 
 const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 

@@ -17,7 +17,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-from glassbox import load_model, logit_lens
+from app import load_model, logit_lens
 
 DEFAULT_PROMPTS = [
     "my name is",

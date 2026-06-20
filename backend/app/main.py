@@ -5,7 +5,7 @@ No request handling, no numerics, no config literals live here — those are in 
 `services/`, and `core/config.py` respectively.
 
 Run it:
-    uv run uvicorn glassbox.main:app --reload
+    uv run uvicorn app.main:app --reload
 """
 
 from __future__ import annotations
@@ -15,9 +15,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from glassbox.api.routers import ablation, attention, logit_lens, meta
-from glassbox.core.config import settings
-from glassbox.core.manager import ModelManager
+from app.api.routers import ablation, attention, logit_lens, meta
+from app.core.config import settings
+from app.core.manager import ModelManager
 
 
 @asynccontextmanager

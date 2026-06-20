@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 
-from glassbox.api.deps import get_manager
-from glassbox.core.manager import ModelManager
-from glassbox.core.models import REGISTRY
-from glassbox.schemas.requests import ModelInfo
+from app.api.deps import get_manager
+from app.core.manager import ModelManager
+from app.core.models import REGISTRY
+from app.schemas.requests import ModelInfo
 
 router = APIRouter()
 

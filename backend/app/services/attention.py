@@ -14,8 +14,8 @@ from __future__ import annotations
 
 import torch
 
-from glassbox.schemas.results import AttentionResult
-from glassbox.services.tokens import bos_flags
+from app.schemas.results import AttentionResult
+from app.services.tokens import bos_flags
 
 # Decimal places kept when serializing weights. The payload is n_layers·n_heads·q·k floats; the
 # lens only ranks/visualizes these, so 4 dp is plenty and roughly halves the JSON size.

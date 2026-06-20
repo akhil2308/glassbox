@@ -17,12 +17,12 @@ Three views of the same forward pass, decoding GPT-2-small (any registered model
 
 ```
 backend/    FastAPI service + the interpretability core (Python, uv).
-            glassbox/{main,api,core,services,schemas} — see backend internals below.
+            app/{main,api,core,services,schemas} — see backend internals below.
 frontend/   React + Vite + D3 UI (TypeScript).
 plans/      Design notes and the weekend roadmap.
 ```
 
-**Backend internals** (`backend/glassbox/`):
+**Backend internals** (`backend/app/`):
 
 - `main.py` — the FastAPI app: lifespan, CORS, router wiring. Nothing else.
 - `api/` — `routers/` (one `APIRouter` per endpoint) and `deps.py` (shared `resolve_model`).

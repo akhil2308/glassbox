@@ -10,7 +10,7 @@ from __future__ import annotations
 import threading
 from collections import OrderedDict
 
-from glassbox.core.models import REGISTRY, load_model, pick_device
+from app.core.models import REGISTRY, load_model, pick_device
 
 
 class ModelManager:

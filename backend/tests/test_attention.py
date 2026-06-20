@@ -10,8 +10,8 @@ from __future__ import annotations
 import pytest
 import torch
 
-from glassbox.core.models import load_model
-from glassbox.services.attention import extract_attention
+from app.core.models import load_model
+from app.services.attention import extract_attention
 from tests.test_faithfulness import PROMPTS
 
 # Every test here boots a real model.

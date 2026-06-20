@@ -1,7 +1,7 @@
 """GLASSBOX — see what a language model is thinking, layer by layer."""
 
-from glassbox.core.models import REGISTRY, load_model, pick_device
-from glassbox.schemas.results import (
+from app.core.models import REGISTRY, load_model, pick_device
+from app.schemas.results import (
     AblationEffect,
     AblationResult,
     AttentionResult,
@@ -9,9 +9,9 @@ from glassbox.schemas.results import (
     LogitLensResult,
     TokenJourney,
 )
-from glassbox.services.ablation import ablate_sweep, ablation, build_ablation_result
-from glassbox.services.attention import attention, build_attention_result, extract_attention
-from glassbox.services.logit_lens import (
+from app.services.ablation import ablate_sweep, ablation, build_ablation_result
+from app.services.attention import attention, build_attention_result, extract_attention
+from app.services.logit_lens import (
     build_result,
     decode_stack,
     extract_resid_stack,

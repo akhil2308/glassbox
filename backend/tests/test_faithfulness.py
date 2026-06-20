@@ -23,8 +23,8 @@ import os
 import pytest
 import torch
 
-from glassbox.core.models import REGISTRY, load_model
-from glassbox.services.logit_lens import decode_stack, extract_resid_stack
+from app.core.models import REGISTRY, load_model
+from app.services.logit_lens import decode_stack, extract_resid_stack
 
 PROMPTS = [
     "The capital of France is",

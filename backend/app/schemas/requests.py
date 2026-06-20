@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from glassbox.core.config import settings
+from app.core.config import settings
 
 
 class PromptRequest(BaseModel):

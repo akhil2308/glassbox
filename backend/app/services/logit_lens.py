@@ -21,8 +21,8 @@ from __future__ import annotations
 
 import torch
 
-from glassbox.schemas.results import LayerPrediction, LogitLensResult, TokenJourney
-from glassbox.services.tokens import bos_flags
+from app.schemas.results import LayerPrediction, LogitLensResult, TokenJourney
+from app.services.tokens import bos_flags
 
 
 @torch.no_grad()

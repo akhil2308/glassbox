@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 
-from glassbox.api.deps import get_manager, resolve_model
-from glassbox.core.manager import ModelManager
-from glassbox.schemas.requests import PromptRequest
-from glassbox.schemas.results import LogitLensResult
-from glassbox.services.logit_lens import logit_lens
+from app.api.deps import get_manager, resolve_model
+from app.core.manager import ModelManager
+from app.schemas.requests import PromptRequest
+from app.schemas.results import LogitLensResult
+from app.services.logit_lens import logit_lens
 
 router = APIRouter()
 

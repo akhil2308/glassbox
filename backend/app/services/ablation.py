@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import torch
 
-from glassbox.schemas.results import AblationEffect, AblationResult
+from app.schemas.results import AblationEffect, AblationResult
 
 # What each component zeroes. Zeroing a block's writes to the residual stream makes it an identity
 # map for that token's vector — i.e. deletes the layer's contribution.

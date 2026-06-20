@@ -13,7 +13,7 @@ setup: ## Install backend + frontend dependencies
 	cd frontend && npm ci
 
 api: ## Run the FastAPI backend with reload (http://localhost:8000)
-	cd backend && uv run uvicorn glassbox.main:app --reload
+	cd backend && uv run uvicorn app.main:app --reload
 
 web: ## Run the Vite dev server (http://localhost:5173)
 	cd frontend && npm run dev

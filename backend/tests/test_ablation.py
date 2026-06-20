@@ -12,8 +12,8 @@ from __future__ import annotations
 import pytest
 import torch
 
-from glassbox.core.models import load_model
-from glassbox.services.ablation import ablate_sweep, ablation_hooks, build_ablation_result
+from app.core.models import load_model
+from app.services.ablation import ablate_sweep, ablation_hooks, build_ablation_result
 from tests.test_faithfulness import PROMPTS
 
 # Every test here boots a real model.

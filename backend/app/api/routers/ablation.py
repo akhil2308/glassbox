@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from glassbox.api.deps import get_manager, resolve_model
-from glassbox.core.config import settings
-from glassbox.core.manager import ModelManager
-from glassbox.schemas.requests import AblationRequest
-from glassbox.schemas.results import AblationResult
-from glassbox.services.ablation import ablation
+from app.api.deps import get_manager, resolve_model
+from app.core.config import settings
+from app.core.manager import ModelManager
+from app.schemas.requests import AblationRequest
+from app.schemas.results import AblationResult
+from app.services.ablation import ablation
 
 router = APIRouter()
 
