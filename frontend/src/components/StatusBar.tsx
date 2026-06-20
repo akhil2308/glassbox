@@ -10,20 +10,24 @@ export function StatusBar({
   device: string | null;
   latencyMs: number | null;
 }) {
+  const chips: { label: string; value: string }[] = [
+    { label: "model", value: model ?? "—" },
+    { label: "device", value: device ?? "—" },
+    { label: "latency", value: latencyMs == null ? "—" : `${latencyMs} ms` },
+  ];
+
   return (
-    <div className="flex gap-4 text-xs" style={{ fontFamily: font.ui, color: color.textLo }}>
-      <span>
-        model: <span style={{ fontFamily: font.mono, color: color.textHi }}>{model ?? "—"}</span>
-      </span>
-      <span>
-        device: <span style={{ fontFamily: font.mono, color: color.textHi }}>{device ?? "—"}</span>
-      </span>
-      <span>
-        latency:{" "}
-        <span style={{ fontFamily: font.mono, color: color.textHi }}>
-          {latencyMs == null ? "—" : `${latencyMs} ms`}
+    <div className="flex gap-2 text-xs">
+      {chips.map((c) => (
+        <span
+          key={c.label}
+          className="inline-flex items-center gap-1.5 rounded-md"
+          style={{ backgroundColor: color.surfaceRaised, padding: "2px 8px" }}
+        >
+          <span style={{ fontFamily: font.ui, color: color.textMd }}>{c.label}</span>
+          <span style={{ fontFamily: font.mono, color: color.textHi }}>{c.value}</span>
         </span>
-      </span>
+      ))}
     </div>
   );
 }

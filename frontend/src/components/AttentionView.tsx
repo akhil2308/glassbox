@@ -25,7 +25,7 @@ export function AttentionView({ result }: { result: AttentionResult }) {
   const pattern = result.patterns[layer][head]; // [query][key]
 
   return (
-    <div className="space-y-3">
+    <div className="gb-fade-up space-y-3">
       <div className="flex flex-wrap gap-3 items-center text-sm">
         <Selector label="layer" value={layer} count={result.n_layers} onChange={setLayer} />
         <Selector label="head" value={head} count={result.n_heads} onChange={setHead} />
@@ -87,6 +87,7 @@ function Selector({
           border: `1px solid ${color.border}`,
           color: color.textHi,
         }}
+        aria-label={label}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
       >
@@ -112,7 +113,7 @@ function Heatmap({
   const n = tokens.length;
   const gridCols = `4rem repeat(${n}, minmax(2.6rem, 1fr))`;
   return (
-    <div className="overflow-x-auto">
+    <div className="gb-card overflow-x-auto p-2">
       <div className="inline-grid gap-px" style={{ gridTemplateColumns: gridCols }}>
         {/* corner + key (column) header */}
         <div
@@ -176,7 +177,7 @@ function Row({
       {tokens.map((_, k) => {
         const w = pattern[q][k];
         // Causal: a query never attends to a future key — leave those blank.
-        if (k > q) return <div key={k} style={{ backgroundColor: "rgba(13,27,30,0.4)" }} />;
+        if (k > q) return <div key={k} style={{ backgroundColor: color.overlay }} />;
         return (
           <div
             key={k}
@@ -275,9 +276,16 @@ function ArcDiagram({
   return (
     <div
       className="overflow-x-auto rounded-md"
-      style={{ border: `1px solid ${color.border}`, backgroundColor: "rgba(13,27,30,0.4)" }}
+      style={{ border: `1px solid ${color.border}`, backgroundColor: color.overlay }}
     >
-      <svg ref={ref} width={width} height={height} />
+      <svg
+        ref={ref}
+        viewBox={`0 0 ${width} ${height}`}
+        width={width}
+        height={height}
+        style={{ width: "100%", maxWidth: width, height: "auto", display: "block" }}
+        preserveAspectRatio="xMinYMid meet"
+      />
     </div>
   );
 }

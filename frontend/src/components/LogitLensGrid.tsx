@@ -65,15 +65,13 @@ function Row({ layerIndex, tokens }: { layerIndex: number; tokens: TokenJourney[
       {tokens.map((t) => {
         const lp = t.layers[layerIndex];
         if (t.is_bos) {
-          return (
-            <div key={t.position} style={{ backgroundColor: "rgba(19,40,44,0.4)" }} />
-          );
+          return <div key={t.position} style={{ backgroundColor: color.surfaceSunken }} />;
         }
         return (
           <div
             key={t.position}
-            className="text-[10px] px-1 py-1 text-center truncate cursor-default"
-            style={{ ...probCellStyle(lp.answer_prob), fontFamily: font.mono }}
+            className="gb-card-raised text-[10px] px-1 py-1 text-center truncate cursor-default"
+            style={{ ...probCellStyle(lp.answer_prob), fontFamily: font.mono, border: "1px solid transparent" }}
             title={`token: ${lp.top_token}\np(top): ${(lp.top_prob * 100).toFixed(1)}%\np(answer): ${(lp.answer_prob * 100).toFixed(1)}%`}
           >
             {trunc(lp.top_token)}

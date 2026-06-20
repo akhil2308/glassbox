@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import * as d3 from "d3";
 import type { AblationComponent, AblationResult } from "../api";
-import { color, font } from "../theme";
+import { color, font, ramp } from "../theme";
 
 const COMPONENTS: { value: AblationComponent; label: string }[] = [
   { value: "block", label: "whole block" },
@@ -20,7 +20,7 @@ export function AblationView({
   setComponent: (c: AblationComponent) => void;
 }) {
   return (
-    <div className="space-y-3">
+    <div className="gb-fade-up space-y-3">
       <div className="flex flex-wrap gap-3 items-center text-sm">
         <label className="flex items-center gap-1" style={{ fontFamily: font.ui, color: color.textLo }}>
           ablate
@@ -32,6 +32,7 @@ export function AblationView({
               border: `1px solid ${color.border}`,
               color: color.textHi,
             }}
+            aria-label="Component to ablate"
             value={component}
             onChange={(e) => setComponent(e.target.value as AblationComponent)}
           >
@@ -55,7 +56,7 @@ export function AblationView({
               {result.baseline_top_token.trim() || "·"}
             </span>{" "}
             <span style={{ color: color.textLo }}>
-              ({(result.baseline_top_prob * 100).toFixed(1)}%) · taller/redder bar = deleting that
+              ({(result.baseline_top_prob * 100).toFixed(1)}%) · taller/brighter bar = deleting that
               layer hurt the prediction more
             </span>
           </p>
@@ -108,8 +109,13 @@ function BarChart({ result }: { result: AblationResult }) {
       .call((sel) => sel.selectAll("text").attr("fill", color.textMd).attr("font-size", 9).attr("font-family", font.mono))
       .call((sel) => sel.selectAll("line,path").attr("stroke", color.border));
 
-    // bars: damage intensity, a gold cap marks layers where the prediction flipped.
-    const damageColor = d3.scaleSequential(d3.interpolateInferno).domain([0, base || 1]);
+    // bars: damage intensity via the shared confidence ramp, a gold cap marks layers
+    // where the prediction flipped.
+    const maxDrop = Math.max(base, d3.max(data, (d) => d.drop) ?? base) || 1;
+    const damageColor = (drop: number) => {
+      const [r, g2, b] = ramp(drop / maxDrop);
+      return `rgb(${r},${g2},${b})`;
+    };
     g.selectAll("rect.bar")
       .data(data)
       .join("rect")
@@ -118,7 +124,7 @@ function BarChart({ result }: { result: AblationResult }) {
       .attr("y", (d) => y(d.drop))
       .attr("width", x.bandwidth())
       .attr("height", (d) => innerH - y(d.drop))
-      .attr("fill", (d) => (d.answer_kept ? damageColor(d.drop) : "rgb(255,207,92)"))
+      .attr("fill", (d) => (d.answer_kept ? damageColor(d.drop) : color.lockGold))
       .append("title")
       .text(
         (d) =>
@@ -136,12 +142,20 @@ function BarChart({ result }: { result: AblationResult }) {
       .text("layer (gold bar = top prediction changed when this layer was deleted)");
   }, [result]);
 
+  const width = Math.max(360, result.effects.length * 46);
+  const height = 240;
   return (
     <div
       className="overflow-x-auto rounded-md p-2"
-      style={{ border: `1px solid ${color.border}`, backgroundColor: "rgba(13,27,30,0.4)" }}
+      style={{ border: `1px solid ${color.border}`, backgroundColor: color.overlay }}
     >
-      <svg ref={ref} width={Math.max(360, result.effects.length * 46)} height={240} />
+      <svg
+        ref={ref}
+        viewBox={`0 0 ${width} ${height}`}
+        width={width}
+        height={height}
+        style={{ width: "100%", maxWidth: width, height: "auto", display: "block" }}
+      />
     </div>
   );
 }

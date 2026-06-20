@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { LayerPrediction, LogitLensResult } from "../api";
-import { color, font, ramp, rampCss } from "../theme";
+import { color, font, glow, ramp, rampCss } from "../theme";
 
 const rgbCss = (c: [number, number, number]) => `rgb(${c[0]},${c[1]},${c[2]})`;
 
@@ -143,14 +143,14 @@ function Channel({
         return (
           <div key={l.layer}>
             {locked && (
-              <div className="relative my-2" style={{ borderTop: `1px dashed rgba(255,207,92,0.5)` }}>
+              <div className="relative my-2" style={{ borderTop: `1px dashed ${color.lockGoldDim}` }}>
                 <span
                   className="absolute right-0"
                   style={{
                     top: -8,
                     fontFamily: font.mono,
                     fontSize: 10,
-                    color: "rgb(255,207,92)",
+                    color: color.lockGold,
                     backgroundColor: color.bg,
                     padding: "0 6px",
                     letterSpacing: "0.04em",
@@ -178,12 +178,11 @@ function Channel({
                 className="flex-1 flex items-center justify-center rounded-md"
                 style={{
                   border: "1px solid",
-                  borderColor: locked ? "rgba(255,207,92,0.55)" : color.border,
-                  backgroundColor: reached ? rampCss(l.answer_prob, 0.16 + 0.8 * l.answer_prob) : "rgba(20,40,44,0.35)",
-                  boxShadow:
-                    reached && l.answer_prob > 0.15
-                      ? `0 0 ${6 + l.answer_prob * 26}px ${rampCss(l.answer_prob, 0.25 + 0.5 * l.answer_prob)}`
-                      : "none",
+                  borderColor: locked ? color.lockGoldDim : color.border,
+                  backgroundColor: reached
+                    ? rampCss(l.answer_prob, 0.16 + 0.8 * l.answer_prob)
+                    : color.surfaceSunken,
+                  boxShadow: reached && l.answer_prob > 0.15 ? glow(l.answer_prob) : "none",
                   transition: "background-color .25s ease, box-shadow .25s ease",
                 }}
               >

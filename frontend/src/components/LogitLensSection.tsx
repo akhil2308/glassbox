@@ -24,7 +24,7 @@ export function LogitLensSection({
   }
 
   return (
-    <div className="space-y-3 relative">
+    <div className="gb-fade-up space-y-3 relative" key={result.model_name + result.final_top_token}>
       <div className="flex flex-wrap items-center gap-3">
         <p className="text-sm" style={{ fontFamily: font.ui, color: color.textMd }}>
           final prediction:{" "}

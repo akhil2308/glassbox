@@ -88,25 +88,39 @@ export default function App() {
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-4">
-      <header>
-        <h1 className="text-2xl font-semibold" style={{ fontFamily: font.ui, color: color.textHi }}>
-          GLASSBOX
-        </h1>
-        <p className="text-sm" style={{ fontFamily: font.ui, color: color.textMd }}>
-          {blurb}
-        </p>
+      <header className="flex items-baseline gap-2">
+        <span style={{ color: color.accent, fontSize: "1.5rem", lineHeight: 1 }}>◆</span>
+        <div>
+          <h1
+            className="text-[1.75rem] font-bold"
+            style={{ fontFamily: font.ui, color: color.textHi, letterSpacing: "0.02em" }}
+          >
+            GLASSBOX
+          </h1>
+          <p className="text-sm" style={{ fontFamily: font.ui, color: color.textMd }}>
+            {blurb}
+          </p>
+        </div>
       </header>
 
-      <nav className="flex gap-1" style={{ borderBottom: `1px solid ${color.border}` }}>
+      <nav
+        role="tablist"
+        className="inline-flex gap-1 rounded-lg p-1"
+        style={{ backgroundColor: color.surfaceRaised }}
+      >
         {TABS.map((t) => (
           <button
             key={t.id}
+            role="tab"
+            aria-selected={view === t.id}
+            aria-controls={`panel-${t.id}`}
             onClick={() => setView(t.id)}
-            className="gb-nav-tab px-3 py-2 text-sm -mb-px"
+            className="gb-nav-tab gb-btn rounded-md px-3 py-1.5 text-sm"
             style={{
               fontFamily: font.ui,
-              borderBottom: `2px solid ${view === t.id ? color.accent : "transparent"}`,
+              backgroundColor: view === t.id ? color.surface : "transparent",
               color: view === t.id ? color.accent : color.textMd,
+              boxShadow: view === t.id ? color.shadowCard : "none",
             }}
           >
             {t.label}
@@ -114,21 +128,24 @@ export default function App() {
         ))}
       </nav>
 
-      <PromptBar
-        prompt={prompt}
-        setPrompt={setPrompt}
-        models={models}
-        model={model}
-        setModel={setModel}
-        onRun={onRun}
-        busy={busy}
-      />
+      <div className="gb-card p-4 space-y-3">
+        <PromptBar
+          prompt={prompt}
+          setPrompt={setPrompt}
+          models={models}
+          model={model}
+          setModel={setModel}
+          onRun={onRun}
+          busy={busy}
+        />
 
-      <StatusBar model={activeModelName ?? null} device={device} latencyMs={latencyMs} />
+        <StatusBar model={activeModelName ?? null} device={device} latencyMs={latencyMs} />
+      </div>
 
       {error && (
         <div
-          className="rounded-md text-sm px-3 py-2"
+          role="alert"
+          className="gb-fade-up rounded-md text-sm px-3 py-2"
           style={{
             fontFamily: font.ui,
             border: `1px solid ${color.danger}`,
@@ -136,28 +153,31 @@ export default function App() {
             color: color.danger,
           }}
         >
+          <span aria-hidden="true">⚠ </span>
           {error}
         </div>
       )}
 
-      {view === "lens" && <LogitLensSection result={lens} busy={busy} error={error} />}
+      <div role="tabpanel" id={`panel-${view}`}>
+        {view === "lens" && <LogitLensSection result={lens} busy={busy} error={error} />}
 
-      {view === "attention" &&
-        (attn ? (
+        {view === "attention" &&
+          (attn ? (
+            <div className="relative">
+              <AttentionView result={attn} />
+              <LoadingOverlay active={busy} />
+            </div>
+          ) : busy || error ? null : (
+            <EmptyState />
+          ))}
+
+        {view === "ablation" && (
           <div className="relative">
-            <AttentionView result={attn} />
-            <LoadingOverlay active={busy} />
+            <AblationView result={abl} component={component} setComponent={setComponent} />
+            <LoadingOverlay active={busy && abl != null} />
           </div>
-        ) : busy || error ? null : (
-          <EmptyState />
-        ))}
-
-      {view === "ablation" && (
-        <div className="relative">
-          <AblationView result={abl} component={component} setComponent={setComponent} />
-          <LoadingOverlay active={busy && abl != null} />
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
