@@ -67,8 +67,16 @@ export function AblationView({
   );
 }
 
+const CHART_HEIGHT = 240;
+
+function chartWidth(nBars: number): number {
+  return Math.max(360, nBars * 46);
+}
+
 function BarChart({ result }: { result: AblationResult }) {
   const ref = useRef<SVGSVGElement | null>(null);
+  const width = chartWidth(result.effects.length);
+  const height = CHART_HEIGHT;
 
   useEffect(() => {
     const base = result.baseline_top_prob;
@@ -79,8 +87,6 @@ function BarChart({ result }: { result: AblationResult }) {
     }));
 
     const margin = { top: 10, right: 12, bottom: 28, left: 36 };
-    const width = Math.max(360, data.length * 46);
-    const height = 240;
     const innerW = width - margin.left - margin.right;
     const innerH = height - margin.top - margin.bottom;
 
@@ -140,10 +146,8 @@ function BarChart({ result }: { result: AblationResult }) {
       .attr("font-size", 10)
       .attr("font-family", font.ui)
       .text("layer (gold bar = top prediction changed when this layer was deleted)");
-  }, [result]);
+  }, [result, width, height]);
 
-  const width = Math.max(360, result.effects.length * 46);
-  const height = 240;
   return (
     <div
       className="overflow-x-auto rounded-md p-2"

@@ -17,16 +17,13 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-from app import load_model, logit_lens
+from app.core.models import load_model
+from app.services.logit_lens import logit_lens
 
 DEFAULT_PROMPTS = [
     "my name is",
     "Hello",
     "I can do",
-    # "The capital of Japan is",
-    # "Water is made of hydrogen and",
-    # "The opposite of hot is",
-    # "2 plus 2 equals",
 ]
 
 OUT_DIR = os.path.join(os.path.dirname(__file__), "..", "outputs")
