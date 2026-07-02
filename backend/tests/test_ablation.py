@@ -9,6 +9,8 @@ Two invariants protect the "delete a layer" story:
 
 from __future__ import annotations
 
+import os
+
 import pytest
 import torch
 
@@ -61,3 +63,21 @@ def test_block_ablation_is_a_passthrough(gpt2):
     final_resid = ablated_cache["resid_post", model.cfg.n_layers - 1]
 
     assert torch.allclose(final_resid, embeddings_resid, atol=1e-4)
+
+
+# --- Gemma gate: the ablation sweep is architecture-general; confirm it holds on Gemma's deeper
+# RMSNorm/GQA stack. Non-blocking — runs only with HF_TOKEN.
+# ponytail: one prompt, baseline-honesty check; gpt2 above covers the passthrough invariant.
+@pytest.mark.skipif(not os.environ.get("HF_TOKEN"), reason="Gemma gate: needs HF_TOKEN")
+def test_gemma_baseline_is_honest():
+    prompt = "The capital of France is"
+    model = load_model("gemma-3-1b", device="cpu")
+    tokens = model.to_tokens(prompt)
+    baseline_logits, per_layer_logits = ablate_sweep(model, tokens, component="block")
+    result = build_ablation_result(
+        model, prompt, "gemma-3-1b", tokens, "block", baseline_logits, per_layer_logits
+    )
+
+    real_top = model.to_single_str_token(int(model(tokens)[0, -1].argmax()))
+    assert result.baseline_top_token == real_top
+    assert len(result.effects) == model.cfg.n_layers

@@ -54,6 +54,11 @@ export default function App() {
   const [abl, setAbl] = useState<AblationResult | null>(null);
   const [component, setComponent] = useState<AblationComponent>("block");
 
+  // Compare mode (lens tab only): run the same prompt through a second model, side by side.
+  const [compareOn, setCompareOn] = useState(false);
+  const [compareModel, setCompareModel] = useState("gpt2");
+  const [lensB, setLensB] = useState<LogitLensResult | null>(null);
+
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [device, setDevice] = useState<string | null>(null);
@@ -78,8 +83,12 @@ export default function App() {
     setGenFrom(undefined);
     const t0 = performance.now();
     try {
-      if (view === "lens") setLens(await runLogitLens(prompt, model));
-      else if (view === "attention") setAttn(await runAttention(prompt, model));
+      if (view === "lens") {
+        setLens(await runLogitLens(prompt, model));
+        // Compare: a second lens call for the other model. Sequential — max_resident=2 keeps
+        // both bridges hot. The two grids render independently; no cross-tokenizer alignment.
+        if (compareOn) setLensB(await runLogitLens(prompt, compareModel));
+      } else if (view === "attention") setAttn(await runAttention(prompt, model));
       else setAbl(await runAblation(prompt, model, component));
       setLatencyMs(Math.round(performance.now() - t0));
       // a freshly-loaded model flips loaded -> true; refresh the list
@@ -127,6 +136,7 @@ export default function App() {
 
   const activeModelName =
     view === "lens" ? lens?.model_name : view === "attention" ? attn?.model_name : abl?.model_name;
+  const activeArch = models.find((m) => m.name === activeModelName)?.arch ?? null;
   const blurb = TABS.find((t) => t.id === view)!.blurb;
 
   return (
@@ -183,7 +193,7 @@ export default function App() {
           setModel={setModel}
           onRun={onRun}
           busy={busy}
-          showSimulate={view === "lens"}
+          showSimulate={view === "lens" && !compareOn}
           onSimulate={onSimulate}
           onStop={onStop}
           simulating={simulating}
@@ -193,9 +203,19 @@ export default function App() {
           setDelayMs={setDelayMs}
           animate={animate}
           setAnimate={setAnimate}
+          showCompare={view === "lens"}
+          compareOn={compareOn}
+          setCompareOn={setCompareOn}
+          compareModel={compareModel}
+          setCompareModel={setCompareModel}
         />
 
-        <StatusBar model={activeModelName ?? null} device={device} latencyMs={latencyMs} />
+        <StatusBar
+          model={activeModelName ?? null}
+          device={device}
+          latencyMs={latencyMs}
+          arch={activeArch}
+        />
       </div>
 
       {error && (
@@ -215,17 +235,35 @@ export default function App() {
       )}
 
       <div role="tabpanel" id={`panel-${view}`}>
-        {view === "lens" && (
-          <LogitLensSection
-            result={lens}
-            busy={busy}
-            error={error}
-            simulating={simulating}
-            genFrom={genFrom}
-            delayMs={delayMs}
-            animate={animate}
-          />
-        )}
+        {view === "lens" &&
+          (compareOn ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {[
+                { name: model, result: lens },
+                { name: compareModel, result: lensB },
+              ].map((col, i) => (
+                <div key={i} className="space-y-2 min-w-0">
+                  <div
+                    className="text-xs px-1"
+                    style={{ fontFamily: font.mono, color: color.textMd }}
+                  >
+                    {models.find((m) => m.name === col.name)?.display_name ?? col.name}
+                  </div>
+                  <LogitLensSection result={col.result} busy={busy} error={error} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <LogitLensSection
+              result={lens}
+              busy={busy}
+              error={error}
+              simulating={simulating}
+              genFrom={genFrom}
+              delayMs={delayMs}
+              animate={animate}
+            />
+          ))}
 
         {view === "attention" &&
           (attn ? (

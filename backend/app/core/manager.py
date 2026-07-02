@@ -52,3 +52,8 @@ class ModelManager:
     def loaded_names(self) -> list[str]:
         with self._lock:
             return list(self._models.keys())
+
+    def peek(self, name: str):
+        """Return the resident bridge for `name`, or None — never loads. For cheap metadata."""
+        with self._lock:
+            return self._models.get(name)

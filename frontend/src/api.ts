@@ -2,11 +2,19 @@
 
 const BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
+export interface ModelArch {
+  norm: string; // "LayerNorm" / "RMSNorm"
+  attention: string; // "MHA" / "GQA 4:1"
+  vocab: number;
+  soft_cap: boolean;
+}
+
 export interface ModelInfo {
   name: string;
   display_name: string;
   gated: boolean;
   loaded: boolean;
+  arch: ModelArch | null; // present only once the model is resident
 }
 
 export interface LayerPrediction {

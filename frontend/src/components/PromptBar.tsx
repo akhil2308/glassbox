@@ -30,6 +30,11 @@ export function PromptBar({
   setDelayMs,
   animate,
   setAnimate,
+  showCompare,
+  compareOn,
+  setCompareOn,
+  compareModel,
+  setCompareModel,
 }: {
   prompt: string;
   setPrompt: (v: string) => void;
@@ -48,7 +53,19 @@ export function PromptBar({
   setDelayMs: (v: number) => void;
   animate: boolean;
   setAnimate: (v: boolean) => void;
+  showCompare: boolean; // compare (second model) only applies to the lens tab
+  compareOn: boolean;
+  setCompareOn: (v: boolean) => void;
+  compareModel: string;
+  setCompareModel: (v: string) => void;
 }) {
+  // Gated models start unloaded but are still selectable — the only way one ever loads is by
+  // being picked and run. A gated, unloaded model just hasn't been tried yet, not unusable; if
+  // HF_TOKEN is missing server-side, Run surfaces the existing 503 hint instead of a dead end.
+  const modelOptions = models.map((m) => ({
+    value: m.name,
+    label: m.display_name + (m.gated && !m.loaded ? " (gated)" : ""),
+  }));
   const disabled = busy || simulating || prompt.trim().length === 0;
   // Speed slider runs fast→slow left to right via delay; default 600ms is a readable pace.
   const SPEED_MAX = 1500;
@@ -80,11 +97,7 @@ export function PromptBar({
           ariaLabel="Model"
           value={model}
           onChange={setModel}
-          options={models.map((m) => ({
-            value: m.name,
-            label: m.display_name + (m.gated && !m.loaded ? " (locked)" : ""),
-            disabled: m.gated && !m.loaded,
-          }))}
+          options={modelOptions}
         />
         <button
           className="gb-btn shrink-0 rounded-md px-4 py-2 text-sm font-semibold disabled:opacity-50"
@@ -130,6 +143,33 @@ export function PromptBar({
         )}
       </div>
     </div>
+
+    {/* Compare (lens tab): run the same prompt through a second model, grids side by side. */}
+    {showCompare && (
+      <div className="flex flex-wrap items-center gap-2 px-1 text-xs" style={{ fontFamily: font.ui, color: color.textLo }}>
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={compareOn}
+            onChange={(e) => setCompareOn(e.target.checked)}
+            className="cursor-pointer"
+            style={{ accentColor: color.accent }}
+          />
+          <span className="shrink-0">compare against</span>
+        </label>
+        {compareOn && (
+          <Select
+            className="w-48 text-sm"
+            width="100%"
+            mono
+            ariaLabel="Compare model"
+            value={compareModel}
+            onChange={setCompareModel}
+            options={modelOptions}
+          />
+        )}
+      </div>
+    )}
 
     {/* One-click starter prompts — fill the input so newcomers see a meaningful pattern fast. */}
     <div className="flex flex-wrap items-center gap-1.5 px-1">

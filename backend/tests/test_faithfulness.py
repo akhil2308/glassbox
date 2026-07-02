@@ -24,6 +24,8 @@ import pytest
 import torch
 
 from app.core.models import REGISTRY, load_model
+from app.services.arch import describe_arch
+from app.services.arch import soft_capped as model_is_soft_capped
 from app.services.logit_lens import decode_stack, extract_resid_stack
 
 PROMPTS = [
@@ -34,19 +36,9 @@ PROMPTS = [
     "My name is",
 ]
 
-
-def model_is_soft_capped(model) -> bool:
-    """True if the model soft-caps its final logits (e.g. Gemma).
-
-    The cap is monotonic, so it changes logit *values* but not their ranking — argmax still
-    holds, but `allclose` against an uncapped reconstruction would not.
-    """
-    cfg = model.cfg
-    for attr in ("output_logits_soft_cap", "final_logit_softcap", "attn_scores_soft_cap"):
-        val = getattr(cfg, attr, None)
-        if val:
-            return True
-    return False
+# model_is_soft_capped lives in app.services.arch now (shared with the arch badge). It gates the
+# stronger `allclose` check below to non-soft-capped models. NB: it must treat the -1.0 cfg value
+# as "disabled" (cap > 0) — otherwise GPT-2 reads as soft-capped and this check silently no-ops.
 
 
 @pytest.fixture(scope="session")
@@ -102,3 +94,22 @@ def test_registry_is_data_only():
     for _name, entry in REGISTRY.items():
         assert {"hf_name", "gated", "display"} <= entry.keys()
         assert not any(callable(v) for v in entry.values())
+
+
+# --- Arch badge drift guard: describe_arch must reflect the real cfg, not stale hand-written data.
+@pytest.mark.slow
+def test_gpt2_arch_matches_cfg(gpt2):
+    arch = describe_arch(gpt2)
+    assert arch.norm == "LayerNorm"
+    assert arch.attention == "MHA"  # GPT-2 is plain multi-head, no GQA
+    assert arch.vocab == 50257
+    assert arch.soft_cap is False  # the -1.0 cfg sentinel means "disabled", not "capped"
+
+
+@pytest.mark.slow
+@pytest.mark.skipif(not os.environ.get("HF_TOKEN"), reason=gemma_reason)
+def test_gemma_arch_matches_cfg():
+    arch = describe_arch(load_model("gemma-3-1b", device="cpu"))
+    assert arch.norm == "RMSNorm"
+    assert arch.attention.startswith("GQA")  # Gemma 3 uses grouped-query attention
+    assert arch.vocab == 262144

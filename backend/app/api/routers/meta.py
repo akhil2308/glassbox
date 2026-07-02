@@ -8,22 +8,26 @@ from app.api.deps import get_manager
 from app.core.manager import ModelManager
 from app.core.models import REGISTRY
 from app.schemas.requests import ModelInfo
+from app.services.arch import describe_arch
 
 router = APIRouter()
 
 
 @router.get("/models", response_model=list[ModelInfo])
 def list_models(manager: ModelManager = Depends(get_manager)):
-    loaded = set(manager.loaded_names())
-    return [
-        ModelInfo(
-            name=name,
-            display_name=entry["display"],
-            gated=entry["gated"],
-            loaded=name in loaded,
+    out = []
+    for name, entry in REGISTRY.items():
+        bridge = manager.peek(name)  # resident only — never triggers a load for metadata
+        out.append(
+            ModelInfo(
+                name=name,
+                display_name=entry["display"],
+                gated=entry["gated"],
+                loaded=bridge is not None,
+                arch=describe_arch(bridge) if bridge is not None else None,
+            )
         )
-        for name, entry in REGISTRY.items()
-    ]
+    return out
 
 
 @router.get("/health")
